@@ -71,7 +71,7 @@
         }
 
         .preview-pane {
-            background-color: white;
+            background-color: #f0f2f5; /* Light gray for contrast with device frames */
         }
 
         /* Pane Header */
@@ -85,10 +85,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            height: 45px;
         }
 
         .preview-pane .pane-header {
-            background-color: #f8f9fa;
+            background-color: #fff;
             color: #6c757d;
             border-bottom: 1px solid #dee2e6;
         }
@@ -112,11 +113,47 @@
             color: #6c757d;
         }
 
-        /* Preview Iframe */
+        /* Preview Container & Iframe */
+        .preview-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow: hidden;
+            padding: 20px;
+            background-color: #e9ecef;
+            position: relative;
+        }
+
         iframe {
+            background: white;
+            border: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            transition: width 0.3s ease, height 0.3s ease;
             width: 100%;
             height: 100%;
+        }
+
+        /* Device Modes */
+        .device-mobile {
+            width: 375px !important;
+            height: 100% !important;
+            border-radius: 8px;
+            border: 8px solid #333;
+        }
+
+        .device-tablet {
+            width: 768px !important;
+            height: 100% !important;
+            border-radius: 8px;
+            border: 8px solid #333;
+        }
+
+        .device-desktop {
+            width: 100% !important;
+            height: 100% !important;
             border: none;
+            border-radius: 0;
         }
 
         /* Loading Overlay */
@@ -151,6 +188,13 @@
                 border-right: none;
                 border-bottom: 1px solid var(--border-color);
             }
+            .preview-container {
+                padding: 0;
+            }
+            /* Disable device preview on mobile screens */
+            .device-controls {
+                display: none !important;
+            }
         }
 
         /* Custom Scrollbar */
@@ -167,6 +211,18 @@
         }
         ::-webkit-scrollbar-thumb:hover {
             background: #6c757d;
+        }
+        
+        .autosave-indicator {
+            font-size: 0.75rem;
+            color: #6c757d;
+            transition: color 0.3s;
+        }
+        .autosave-indicator.saving {
+            color: #ffc107;
+        }
+        .autosave-indicator.saved {
+            color: #198754;
         }
     </style>
 <script type="importmap">
@@ -228,7 +284,10 @@
                     <i class="bi bi-filetype-html"></i>
                     <span>index.html</span>
                 </div>
-                <span id="char-count">0 chars</span>
+                <div class="d-flex align-items-center gap-3">
+                    <span id="autosave-status" class="autosave-indicator"><i class="bi bi-check2"></i> Local Saved</span>
+                    <span id="char-count">0 chars</span>
+                </div>
             </div>
             <textarea id="code-editor" spellcheck="false" placeholder="<!-- Start coding your masterpiece here... -->"></textarea>
         </div>
@@ -236,12 +295,29 @@
         <!-- Preview Column -->
         <div class="pane preview-pane">
             <div class="pane-header">
-                <span class="fw-bold"><i class="bi bi-eye-fill me-2"></i>Preview</span>
-                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 d-flex align-items-center gap-1">
-                    <i class="bi bi-circle-fill" style="font-size: 6px;"></i> Live
-                </span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold"><i class="bi bi-eye-fill me-2"></i>Preview</span>
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 d-flex align-items-center gap-1">
+                        <i class="bi bi-circle-fill" style="font-size: 6px;"></i> Live
+                    </span>
+                </div>
+                
+                <!-- Device Controls -->
+                <div class="btn-group btn-group-sm device-controls" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" onclick="setPreviewMode('desktop')" title="Desktop View">
+                        <i class="bi bi-pc-display"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="setPreviewMode('tablet')" title="Tablet View">
+                        <i class="bi bi-tablet"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="setPreviewMode('mobile')" title="Mobile View">
+                        <i class="bi bi-phone"></i>
+                    </button>
+                </div>
             </div>
-            <iframe id="preview-frame" sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin"></iframe>
+            <div class="preview-container">
+                <iframe id="preview-frame" class="device-desktop" sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin"></iframe>
+            </div>
         </div>
     </div>
 
@@ -263,13 +339,14 @@
     <!-- App Logic -->
     <script>
         // --- CONFIGURATION ---
-        // PENTING: Ganti URL ini dengan URL Web App terbaru Anda setelah deploy di Apps Script
         const APP_URL = "https://script.google.com/macros/s/AKfycbw_NrRwHRt_x8UlsQCKIddB6WXjA_kodlh77OliuuW5MeQMsdoNzUuDfVmvPx5NLlFk7g/exec";
+        const AUTOSAVE_KEY = "sheetrocket_autosave_content";
 
         // --- GLOBAL VARIABLES ---
         let bsToast;
-        let editor, preview, charCount, toastEl, toastBody, loadingOverlay, loadingText, projectStatus;
+        let editor, preview, charCount, toastEl, toastBody, loadingOverlay, loadingText, projectStatus, autosaveStatus;
         let currentCloudId = null;
+        let autosaveTimer;
 
         // --- UTILITIES ---
         const encode = (str) => {
@@ -283,8 +360,47 @@
         const updatePreview = () => {
             if (!editor) return;
             const code = editor.value;
+            
+            // Only update iframe if needed to prevent flashing, but for vanilla simple handling usually ok
             preview.srcdoc = code;
             charCount.textContent = code.length + ' chars';
+            
+            triggerAutosave();
+        };
+
+        const triggerAutosave = () => {
+            if (autosaveStatus) {
+                autosaveStatus.innerHTML = '<i class="bi bi-pencil-fill"></i> Typing...';
+                autosaveStatus.className = 'autosave-indicator saving';
+            }
+            
+            clearTimeout(autosaveTimer);
+            autosaveTimer = setTimeout(() => {
+                localStorage.setItem(AUTOSAVE_KEY, editor.value);
+                if (autosaveStatus) {
+                    autosaveStatus.innerHTML = '<i class="bi bi-check2"></i> Local Saved';
+                    autosaveStatus.className = 'autosave-indicator saved';
+                }
+            }, 1000); // Save after 1 second of inactivity
+        };
+
+        const setPreviewMode = (mode) => {
+            const frame = document.getElementById('preview-frame');
+            frame.className = ''; // Reset classes
+            
+            // Update buttons state
+            document.querySelectorAll('.device-controls .btn').forEach(btn => btn.classList.remove('active'));
+            
+            if (mode === 'mobile') {
+                frame.classList.add('device-mobile');
+                document.querySelector('[onclick="setPreviewMode(\'mobile\')"]').classList.add('active');
+            } else if (mode === 'tablet') {
+                frame.classList.add('device-tablet');
+                document.querySelector('[onclick="setPreviewMode(\'tablet\')"]').classList.add('active');
+            } else {
+                frame.classList.add('device-desktop');
+                document.querySelector('[onclick="setPreviewMode(\'desktop\')"]').classList.add('active');
+            }
         };
 
         const showToast = (msg, isError = false) => {
@@ -306,7 +422,7 @@
             if (loadingOverlay) loadingOverlay.style.display = 'none';
         };
 
-        // --- GOOGLE SHEETS INTERACTION (VIA FETCH API) ---
+        // --- GOOGLE SHEETS INTERACTION ---
         const saveToCloud = () => {
             const code = editor.value;
             const btn = document.getElementById('btn-save');
@@ -343,17 +459,11 @@
                 }
             })
             .catch(err => {
-                // Ignore parsing errors for no-cors mode, but assume success if no network error 
-                // However, without ID return, we can't really "confirm". 
-                // Ideally, user must set Web App to "Anyone" and we use standard CORS if possible.
-                // For this demo, we handle the likely parsing failure.
                 btn.innerHTML = originalBtnText;
                 btn.disabled = false;
                 console.warn(err);
-                
-                // If it was a JSON parse error, it might mean the request succeeded but we can't read response in no-cors
-                // But we need the ID. So we really need CORS.
-                showToast('Check console. Ensure Apps Script deployment is "Anyone"', true);
+                // Attempt to notify user even if CORS blocks response reading
+                showToast('Request sent. If ID does not appear, check CORS/Deployment.', true);
             });
         };
 
@@ -429,6 +539,11 @@
         };
 
         const deployPage = () => {
+            // Confirmation before deploy
+            if (!confirm('Are you sure you want to deploy this page?')) {
+                return;
+            }
+
             const baseUrl = getBaseUrl();
             let url;
             if (currentCloudId) {
@@ -492,6 +607,7 @@
                 loadingOverlay = document.getElementById('loading-overlay');
                 loadingText = document.getElementById('loading-text');
                 projectStatus = document.getElementById('project-status');
+                autosaveStatus = document.getElementById('autosave-status');
 
                 // Initialize Bootstrap
                 if (typeof bootstrap !== 'undefined' && toastEl) {
@@ -531,7 +647,7 @@
                         document.write(decoded);
                         document.close();
                     } else {
-                        hideLoading(); // Should fail gracefully
+                        hideLoading();
                         document.body.style.display = 'flex';
                     }
                 } else if (hash && hash.length > 1) {
@@ -541,9 +657,18 @@
                     updatePreview();
                     document.body.style.display = 'flex';
                 } else {
-                    // New Project
+                    // New Project / Local Restore
                     hideLoading();
-                    if(editor) editor.value = DEFAULT_CODE;
+                    
+                    // Restore from Autosave if available and default code is present
+                    const localSaved = localStorage.getItem(AUTOSAVE_KEY);
+                    if (localSaved) {
+                        editor.value = localSaved;
+                        showToast('Restored from local autosave');
+                    } else {
+                        editor.value = DEFAULT_CODE;
+                    }
+                    
                     updatePreview();
                     document.body.style.display = 'flex';
                 }
