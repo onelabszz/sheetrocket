@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InstantDeploy - AI Web Builder</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        body, html {
+            height: 100%;
+            overflow: hidden;
+            background-color: #212529; /* Dark bg */
+        }
+        
+        #app-container {
+            height: calc(100vh - 60px); /* Subtract navbar height */
+        }
+
+        .editor-pane {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            border: none;
+            resize: none;
+            outline: none;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .preview-pane {
+            background-color: white;
+            padding: 0;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* View Modes */
+        .view-split .col-editor, .view-split .col-preview { width: 50%; display: block; }
+        .view-editor .col-editor { width: 100%; display: block; }
+        .view-editor .col-preview { display: none; }
+        .view-preview .col-editor { display: none; }
+        .view-preview .col-preview { width: 100%; display: block; }
+
+        /* Loader */
+        .spinner-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .spinner-overlay.active { display: flex; }
+    </style>
+
+    <!-- Import Map for Modules -->
+    <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "lz-string": "https://esm.sh/lz-string@^1.5.0",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
+  }
+}
+</script>
+</head>
+<body class="text-light">
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand navbar-dark bg-dark border-bottom border-secondary" style="height: 60px;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="#">
+                <i class="bi bi-code-square text-primary"></i>
+                <span class="d-none d-md-block">InstantDeploy</span>
+            </a>
+
+            <!-- AI Prompt Input -->
+            <form id="ai-form" class="d-flex flex-grow-1 mx-2 mx-md-4 position-relative">
+                <div class="input-group">
+                    <span class="input-group-text bg-secondary border-secondary text-light">
+                        <i class="bi bi-stars text-warning"></i>
+                    </span>
+                    <input type="text" id="prompt-input" class="form-control bg-dark text-light border-secondary" placeholder="Describe a page (e.g., 'Landing page for a coffee shop')" required autocomplete="off">
+                    <button class="btn btn-primary d-flex align-items-center gap-2" type="submit" id="btn-generate">
+                        <span>Generate</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Actions -->
+            <div class="d-flex gap-2">
+                <!-- View Toggles -->
+                <div class="btn-group d-none d-sm-flex" role="group">
+                    <button type="button" class="btn btn-outline-secondary" onclick="setMode('editor')" title="Editor Only">
+                        <i class="bi bi-code-slash"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary active" onclick="setMode('split')" title="Split View">
+                        <i class="bi bi-layout-split"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="setMode('preview')" title="Preview Only">
+                        <i class="bi bi-display"></i>
+                    </button>
+                </div>
+
+                <!-- Share Button -->
+                <button class="btn btn-success d-flex align-items-center gap-2" onclick="shareCode()" id="btn-share">
+                    <i class="bi bi-share-fill"></i>
+                    <span class="d-none d-md-inline">Share</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div id="app-container" class="d-flex w-100 view-split">
+        <!-- Editor -->
+        <div class="col-editor h-100 border-end border-secondary position-relative">
+            <div class="position-absolute top-0 start-0 p-2 text-secondary small text-uppercase font-monospace" style="pointer-events: none;">index.html</div>
+            <textarea id="code-editor" class="editor-pane w-100 h-100 p-4 pt-5" spellcheck="false"></textarea>
+            
+            <!-- Loading Overlay -->
+            <div id="loading-overlay" class="spinner-overlay">
+                <div class="text-center text-white">
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <div>Generating code with AI...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="col-preview h-100 position-relative bg-white">
+            <iframe id="preview-frame" sandbox="allow-scripts allow-modals allow-forms allow-same-origin"></iframe>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="liveToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle me-2"></i> Link copied to clipboard!
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- App Logic -->
+    <script type="module">
+        import { GoogleGenAI } from "@google/genai";
+        import LZString from "lz-string";
+
+        // --- Configuration & State ---
+        // NOTE: process.env.API_KEY is injected by the environment.
+        const API_KEY = process.env.API_KEY; 
+        
+        const DEFAULT_CODE = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World</title>
+    <style>
+        body { 
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            height: 100vh; margin: 0; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
+        }
+        .card { 
+            background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            text-align: center; max-width: 400px;
+        }
+        h1 { margin-top: 0; color: #333; }
+        button { 
+            background: #0d6efd; color: white; border: none; padding: 10px 20px; 
+            border-radius: 6px; cursor: pointer; font-size: 1rem; margin-top: 1rem; 
+        }
+        button:hover { background: #0b5ed7; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>It Works!</h1>
+        <p>This page was generated instantly. Try editing the code on the left or use the AI input above to create something new.</p>
+        <button onclick="alert('Hello from your new page!')">Click Me</button>
+    </div>
+</body>
+</html>`;
+
+        const editor = document.getElementById('code-editor');
+        const preview = document.getElementById('preview-frame');
+        const container = document.getElementById('app-container');
+        const promptInput = document.getElementById('prompt-input');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const toastEl = document.getElementById('liveToast');
+        const toast = new bootstrap.Toast(toastEl);
+
+        // --- Logic ---
+
+        // 1. Initialize
+        function init() {
+            const hash = window.location.hash;
+            if (hash.startsWith('#code=')) {
+                try {
+                    const compressed = hash.slice(6);
+                    const decompressed = LZString.decompressFromEncodedURIComponent(compressed);
+                    if (decompressed) {
+                        editor.value = decompressed;
+                    } else {
+                        editor.value = DEFAULT_CODE;
+                    }
+                } catch (e) {
+                    console.error("Failed to load from URL", e);
+                    editor.value = DEFAULT_CODE;
+                }
+            } else {
+                editor.value = DEFAULT_CODE;
+            }
+            updatePreview();
+        }
+
+        // 2. Update Preview
+        function updatePreview() {
+            const code = editor.value;
+            const doc = preview.contentDocument;
+            if (doc) {
+                doc.open();
+                doc.write(code);
+                doc.close();
+            }
+        }
+
+        // 3. View Mode Switching
+        window.setMode = (mode) => {
+            container.className = `d-flex w-100 view-${mode}`;
+            // Update button states
+            document.querySelectorAll('.btn-group .btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        };
+
+        // 4. Share / Copy Link
+        window.shareCode = () => {
+            const code = editor.value;
+            const compressed = LZString.compressToEncodedURIComponent(code);
+            const url = `${window.location.origin}${window.location.pathname}#code=${compressed}`;
+            
+            window.history.pushState(null, '', url);
+            navigator.clipboard.writeText(url).then(() => {
+                toast.show();
+            });
+        };
+
+        // 5. Generate AI Code
+        document.getElementById('ai-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const prompt = promptInput.value.trim();
+            if (!prompt) return;
+
+            if (!API_KEY) {
+                alert("API Key is missing in the environment!");
+                return;
+            }
+
+            loadingOverlay.classList.add('active');
+            document.getElementById('btn-generate').disabled = true;
+
+            try {
+                const ai = new GoogleGenAI({ apiKey: API_KEY });
+                
+                const fullPrompt = `
+                    You are an expert frontend web developer. 
+                    Task: Create or modify a single-file HTML document based on the user's request.
+                    User Request: "${prompt}"
+                    Current Code: \n${editor.value}
+                    
+                    Requirements:
+                    1. Return ONLY the raw HTML code. Do NOT use markdown blocks (\`\`\`).
+                    2. Use internal CSS in <style> for a modern, beautiful design.
+                    3. Use vanilla JS in <script> tags if interactivity is needed.
+                    4. Maintain a single file structure (<!DOCTYPE html>...).
+                `;
+
+                const response = await ai.models.generateContent({
+                    model: 'gemini-3-flash-preview',
+                    contents: fullPrompt,
+                    config: {
+                        thinkingConfig: { thinkingBudget: 0 }
+                    }
+                });
+
+                let text = response.text || '';
+                // Clean markdown if present
+                text = text.replace(/^```html/, '').replace(/^```/, '').replace(/```$/, '').trim();
+
+                editor.value = text;
+                updatePreview();
+                promptInput.value = '';
+
+            } catch (error) {
+                console.error("AI Error:", error);
+                alert("Failed to generate code. Please try again.");
+            } finally {
+                loadingOverlay.classList.remove('active');
+                document.getElementById('btn-generate').disabled = false;
+            }
+        });
+
+        // 6. Listeners
+        editor.addEventListener('input', () => {
+            // Debounce slightly for performance if needed, but instant is okay for small files
+            updatePreview();
+        });
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>
