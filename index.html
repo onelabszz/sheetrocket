@@ -264,8 +264,12 @@
     <script>
         // --- CONFIGURATION ---
         // PENTING: Ganti URL ini dengan URL Web App terbaru Anda setelah deploy di Apps Script
-        // Format: https://script.google.com/macros/s/..../exec
         const APP_URL = "https://script.google.com/macros/s/AKfycbw_NrRwHRt_x8UlsQCKIddB6WXjA_kodlh77OliuuW5MeQMsdoNzUuDfVmvPx5NLlFk7g/exec";
+
+        // --- GLOBAL VARIABLES ---
+        let bsToast;
+        let editor, preview, charCount, toastEl, toastBody, loadingOverlay, loadingText, projectStatus;
+        let currentCloudId = null;
 
         // --- UTILITIES ---
         const encode = (str) => {
@@ -275,19 +279,166 @@
             try { return decodeURIComponent(escape(atob(hash.replace(/^#/, '')))); } catch(e) { return ''; }
         };
 
-        // --- DOM ELEMENTS ---
-        const editor = document.getElementById('code-editor');
-        const preview = document.getElementById('preview-frame');
-        const charCount = document.getElementById('char-count');
-        const toastEl = document.getElementById('toast-msg');
-        const toastBody = document.getElementById('toast-body-text');
-        const bsToast = new bootstrap.Toast(toastEl);
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const loadingText = document.getElementById('loading-text');
-        const projectStatus = document.getElementById('project-status');
+        // --- CORE FUNCTIONS ---
+        const updatePreview = () => {
+            if (!editor) return;
+            const code = editor.value;
+            preview.srcdoc = code;
+            charCount.textContent = code.length + ' chars';
+        };
 
-        // --- STATE ---
-        let currentCloudId = null;
+        const showToast = (msg, isError = false) => {
+            if (toastBody) toastBody.textContent = msg;
+            if (toastEl) {
+                toastEl.classList.remove('bg-success', 'bg-danger');
+                toastEl.classList.add(isError ? 'bg-danger' : 'bg-success');
+                if (bsToast) bsToast.show();
+                else console.log("Toast:", msg);
+            }
+        };
+
+        const showLoading = (msg) => {
+            if (loadingText) loadingText.textContent = msg;
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
+        };
+
+        const hideLoading = () => {
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+        };
+
+        // --- GOOGLE SHEETS INTERACTION (VIA FETCH API) ---
+        const saveToCloud = () => {
+            const code = editor.value;
+            const btn = document.getElementById('btn-save');
+            const originalBtnText = btn.innerHTML;
+            
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+            btn.disabled = true;
+
+            const payload = JSON.stringify({
+                action: 'save',
+                html: code
+            });
+
+            fetch(APP_URL, {
+                method: 'POST',
+                mode: 'no-cors', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: payload
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    currentCloudId = data.id;
+                    btn.innerHTML = originalBtnText;
+                    btn.disabled = false;
+                    projectStatus.textContent = "Saved to Sheet (ID: " + data.id + ")";
+                    projectStatus.classList.add('text-success');
+                    
+                    const newUrl = updateQueryString('id', data.id);
+                    window.history.pushState({path: newUrl}, '', newUrl);
+                    showToast('Project saved to Google Sheets!');
+                } else {
+                    throw new Error(data.message || 'Unknown error');
+                }
+            })
+            .catch(err => {
+                // Ignore parsing errors for no-cors mode, but assume success if no network error 
+                // However, without ID return, we can't really "confirm". 
+                // Ideally, user must set Web App to "Anyone" and we use standard CORS if possible.
+                // For this demo, we handle the likely parsing failure.
+                btn.innerHTML = originalBtnText;
+                btn.disabled = false;
+                console.warn(err);
+                
+                // If it was a JSON parse error, it might mean the request succeeded but we can't read response in no-cors
+                // But we need the ID. So we really need CORS.
+                showToast('Check console. Ensure Apps Script deployment is "Anyone"', true);
+            });
+        };
+
+        const loadFromCloud = (id, isViewMode) => {
+            showLoading("Fetching from Google Database...");
+            const fetchUrl = `${APP_URL}?action=load&id=${id}`;
+
+            fetch(fetchUrl)
+            .then(response => response.json())
+            .then(data => {
+                 if (data.status === 'success') {
+                    const content = data.content;
+                    if (isViewMode) {
+                        document.open();
+                        document.write(content);
+                        document.close();
+                        hideLoading();
+                    } else {
+                        editor.value = content;
+                        currentCloudId = id;
+                        projectStatus.textContent = "Loaded from Sheet (ID: " + id + ")";
+                        updatePreview();
+                        hideLoading();
+                        document.body.style.display = 'flex';
+                    }
+                } else {
+                    throw new Error(data.message || 'Project not found');
+                }
+            })
+            .catch(err => {
+                hideLoading();
+                console.error(err);
+                if (!isViewMode) {
+                    showToast("Failed to load: " + err.message, true);
+                    editor.value = DEFAULT_CODE;
+                    updatePreview();
+                    document.body.style.display = 'flex';
+                } else {
+                    document.body.innerHTML = `<div style="color:white;text-align:center;padding:50px">Error: ${err.message}</div>`;
+                    document.body.style.display = 'block';
+                }
+            });
+        };
+
+        // --- URL HELPERS ---
+        const updateQueryString = (key, value) => {
+            const url = new URL(window.location.href);
+            url.searchParams.set(key, value);
+            if(key === 'id') url.hash = ''; 
+            return url.toString();
+        };
+
+        const getBaseUrl = () => {
+            return window.location.href.split('?')[0].split('#')[0];
+        };
+
+        const shareLink = async () => {
+            const baseUrl = getBaseUrl();
+            let finalUrl = baseUrl;
+            if (currentCloudId) {
+                 finalUrl = `${baseUrl}?id=${currentCloudId}`;
+            } else {
+                const hash = encode(editor.value);
+                finalUrl = `${baseUrl}#${hash}`;
+                window.location.hash = hash;
+            }
+            try {
+                await navigator.clipboard.writeText(finalUrl);
+                showToast('Link copied!');
+            } catch (err) {
+                prompt("Copy this link:", finalUrl);
+            }
+        };
+
+        const deployPage = () => {
+            const baseUrl = getBaseUrl();
+            let url;
+            if (currentCloudId) {
+                url = `${baseUrl}?view=1&id=${currentCloudId}`;
+            } else {
+                const hash = encode(editor.value);
+                url = `${baseUrl}?view=1#${hash}`;
+            }
+            window.open(url, '_blank');
+        };
 
         // --- DEFAULT CODE ---
         const DEFAULT_CODE = `<!DOCTYPE html>
@@ -329,236 +480,84 @@
 </body>
 </html>`;
 
-        // --- CORE FUNCTIONS ---
+        // --- INITIALIZATION ---
+        window.addEventListener('load', function() {
+            try {
+                // Initialize Elements
+                editor = document.getElementById('code-editor');
+                preview = document.getElementById('preview-frame');
+                charCount = document.getElementById('char-count');
+                toastEl = document.getElementById('toast-msg');
+                toastBody = document.getElementById('toast-body-text');
+                loadingOverlay = document.getElementById('loading-overlay');
+                loadingText = document.getElementById('loading-text');
+                projectStatus = document.getElementById('project-status');
 
-        const updatePreview = () => {
-            const code = editor.value;
-            preview.srcdoc = code;
-            charCount.textContent = code.length + ' chars';
-        };
-
-        const showToast = (msg, isError = false) => {
-            toastBody.textContent = msg;
-            toastEl.classList.remove('bg-success', 'bg-danger');
-            toastEl.classList.add(isError ? 'bg-danger' : 'bg-success');
-            bsToast.show();
-        };
-
-        const showLoading = (msg) => {
-            loadingText.textContent = msg;
-            loadingOverlay.style.display = 'flex';
-        };
-
-        const hideLoading = () => {
-            loadingOverlay.style.display = 'none';
-        };
-
-        // --- GOOGLE SHEETS INTERACTION (VIA FETCH API) ---
-
-        const saveToCloud = () => {
-            const code = editor.value;
-            const btn = document.getElementById('btn-save');
-            const originalBtnText = btn.innerHTML;
-            
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
-            btn.disabled = true;
-
-            // Prepare Payload
-            // Note: Google Apps Script Web Apps require POST data to be sent slightly differently depending on setup,
-            // but for JSON payloads, using text/plain prevents CORS preflight issues in some browser/GAS combos.
-            // GAS will parse e.postData.contents.
-            const payload = JSON.stringify({
-                action: 'save',
-                html: code
-            });
-
-            fetch(APP_URL, {
-                method: 'POST',
-                mode: 'no-cors', // Hack: GAS doPost redirects which fetch follows but opaque. 
-                                 // However, for retrieving the ID, we ideally need CORS working or return JSONP.
-                                 // Since we need the ID back, we try standard CORS. 
-                                 // IF CORS FAILS: Ensure "Who has access" is "Anyone".
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8', 
-                },
-                body: payload
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    currentCloudId = data.id;
-                    
-                    // Update UI
-                    btn.innerHTML = originalBtnText;
-                    btn.disabled = false;
-                    projectStatus.textContent = "Saved to Sheet (ID: " + data.id + ")";
-                    projectStatus.classList.add('text-success');
-                    
-                    // Update URL
-                    const newUrl = updateQueryString('id', data.id);
-                    window.history.pushState({path: newUrl}, '', newUrl);
-                    
-                    showToast('Project saved to Google Sheets!');
+                // Initialize Bootstrap
+                if (typeof bootstrap !== 'undefined' && toastEl) {
+                    bsToast = new bootstrap.Toast(toastEl);
                 } else {
-                    throw new Error(data.message || 'Unknown error');
+                    console.warn("Bootstrap JS not loaded or Toast element missing");
                 }
-            })
-            .catch(err => {
-                // Fetch to GAS often fails JSON parsing due to 302 redirect for visual HTML
-                // But for ContentService JSON, it should work if deployed correctly.
-                btn.innerHTML = originalBtnText;
-                btn.disabled = false;
-                console.error(err);
-                showToast('Save failed. Check console. Ensure API is public.', true);
-            });
-        };
 
-        const loadFromCloud = (id, isViewMode) => {
-            showLoading("Fetching from Google Database...");
-            
-            // Append Query Params
-            const fetchUrl = `${APP_URL}?action=load&id=${id}`;
+                // Initialize Event Listeners
+                if (editor) {
+                    editor.addEventListener('input', updatePreview);
+                    editor.addEventListener('keydown', (e) => {
+                        if (e.key === 'Tab') {
+                            e.preventDefault();
+                            const start = editor.selectionStart;
+                            const end = editor.selectionEnd;
+                            editor.value = editor.value.substring(0, start) + "  " + editor.value.substring(end);
+                            editor.selectionStart = editor.selectionEnd = start + 2;
+                            updatePreview();
+                        }
+                    });
+                }
 
-            fetch(fetchUrl)
-            .then(response => response.json())
-            .then(data => {
-                 if (data.status === 'success') {
-                    const content = data.content;
-                    if (isViewMode) {
+                // Check URL Params
+                const params = new URLSearchParams(window.location.search);
+                const viewMode = params.get('view') === '1';
+                const id = params.get('id');
+                const hash = window.location.hash;
+
+                // Routing
+                if (id) {
+                    loadFromCloud(id, viewMode);
+                } else if (viewMode && hash) {
+                    const decoded = decode(hash);
+                    if (decoded) {
                         document.open();
-                        document.write(content);
+                        document.write(decoded);
                         document.close();
-                        hideLoading();
                     } else {
-                        editor.value = content;
-                        currentCloudId = id;
-                        projectStatus.textContent = "Loaded from Sheet (ID: " + id + ")";
-                        updatePreview();
-                        hideLoading();
+                        hideLoading(); // Should fail gracefully
                         document.body.style.display = 'flex';
                     }
-                } else {
-                    throw new Error(data.message || 'Project not found');
-                }
-            })
-            .catch(err => {
-                hideLoading();
-                console.error(err);
-                // Fallback if network fails
-                if (!isViewMode) {
-                    showToast("Failed to load project: " + err.message, true);
-                    editor.value = DEFAULT_CODE;
+                } else if (hash && hash.length > 1) {
+                    hideLoading();
+                    const decoded = decode(hash);
+                    editor.value = decoded || DEFAULT_CODE;
                     updatePreview();
                     document.body.style.display = 'flex';
                 } else {
-                    document.body.innerHTML = `<div style="color:white;text-align:center;padding:50px">Error: ${err.message}</div>`;
-                    document.body.style.display = 'block';
-                }
-            });
-        };
-
-        // --- URL HELPERS ---
-
-        const updateQueryString = (key, value) => {
-            const url = new URL(window.location.href);
-            url.searchParams.set(key, value);
-            if(key === 'id') url.hash = ''; 
-            return url.toString();
-        };
-
-        const getBaseUrl = () => {
-            return window.location.href.split('?')[0].split('#')[0];
-        };
-
-        const shareLink = async () => {
-            const baseUrl = getBaseUrl();
-            let finalUrl = baseUrl;
-            
-            if (currentCloudId) {
-                 finalUrl = `${baseUrl}?id=${currentCloudId}`;
-            } else {
-                const hash = encode(editor.value);
-                finalUrl = `${baseUrl}#${hash}`;
-                window.location.hash = hash;
-            }
-
-            try {
-                await navigator.clipboard.writeText(finalUrl);
-                showToast('Link copied: ' + (currentCloudId ? 'Cloud Link' : 'Hash Link'));
-            } catch (err) {
-                prompt("Copy this link:", finalUrl);
-            }
-        };
-
-        const deployPage = () => {
-            const baseUrl = getBaseUrl();
-            let url;
-            
-            if (currentCloudId) {
-                url = `${baseUrl}?view=1&id=${currentCloudId}`;
-            } else {
-                const hash = encode(editor.value);
-                url = `${baseUrl}?view=1#${hash}`;
-            }
-            window.open(url, '_blank');
-        };
-
-        // --- INITIALIZATION ---
-
-        (function init() {
-            const params = new URLSearchParams(window.location.search);
-            const viewMode = params.get('view') === '1';
-            const id = params.get('id');
-            const hash = window.location.hash;
-
-            // 1. Cloud Mode (ID exists)
-            if (id) {
-                loadFromCloud(id, viewMode);
-                return;
-            }
-
-            // 2. Legacy Hash Mode (View)
-            if (viewMode && hash) {
-                const decoded = decode(hash);
-                if (decoded) {
-                    document.open();
-                    document.write(decoded);
-                    document.close();
-                    return;
-                }
-            }
-            
-            // 3. Legacy Hash Mode (Edit)
-            if (hash && hash.length > 1) {
-                hideLoading();
-                const decoded = decode(hash);
-                editor.value = decoded || DEFAULT_CODE;
-                updatePreview();
-                document.body.style.display = 'flex';
-                return;
-            }
-
-            // 4. New Project
-            hideLoading();
-            editor.value = DEFAULT_CODE;
-            updatePreview();
-            document.body.style.display = 'flex';
-        })();
-
-        // --- EVENT LISTENERS ---
-        if (editor) {
-            editor.addEventListener('input', updatePreview);
-            editor.addEventListener('keydown', (e) => {
-                if (e.key === 'Tab') {
-                    e.preventDefault();
-                    const start = editor.selectionStart;
-                    const end = editor.selectionEnd;
-                    editor.value = editor.value.substring(0, start) + "  " + editor.value.substring(end);
-                    editor.selectionStart = editor.selectionEnd = start + 2;
+                    // New Project
+                    hideLoading();
+                    if(editor) editor.value = DEFAULT_CODE;
                     updatePreview();
+                    document.body.style.display = 'flex';
                 }
-            });
-        }
+
+            } catch (e) {
+                console.error("Initialization error:", e);
+                // Emergency Fallback
+                if (document.getElementById('loading-overlay')) {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                }
+                document.body.style.display = 'flex';
+                alert("Aplikasi mengalami masalah inisialisasi: " + e.message);
+            }
+        });
     </script>
 </body>
 </html>
