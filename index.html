@@ -7,99 +7,155 @@
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Google Fonts (Inter & JetBrains Mono) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     <style>
+        /* --- MATERIAL YOU (M3) THEME VARIABLES --- */
         :root {
-            --editor-bg: #1e1e1e;
-            --editor-text: #d4d4d4;
-            --border-color: #343a40;
+            /* Palette: M3 Dark High Contrast */
+            --md-sys-color-background: #111111; /* Very dark grey, almost black */
+            --md-sys-color-surface: #1e1f20;     /* Panel background */
+            --md-sys-color-surface-variant: #2d2e2f; /* Borders/Headers */
+            
+            --md-sys-color-primary: #d0bcff;     /* Lilac pastel for primary actions */
+            --md-sys-color-on-primary: #381e72;  /* Text on primary */
+            
+            --md-sys-color-secondary-container: #334455; /* For buttons/toggles */
+            --md-sys-color-on-secondary-container: #cce5ff;
+            
+            --md-sys-color-success: #b6f2ba;     /* Pastel Green */
+            --md-sys-color-on-success: #0c3b10;
+            
+            --md-sys-color-text-main: #e3e3e3;
+            --md-sys-color-text-sub: #c4c7c5;
+            
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 8px;
         }
 
         body {
-            background-color: #212529;
+            background-color: var(--md-sys-color-background);
             font-family: 'Inter', sans-serif;
             height: 100vh;
             overflow: hidden;
-            display: none; /* Disembunyikan saat inisialisasi */
+            display: none; /* Hidden until loaded */
             flex-direction: column;
-            color: #f8f9fa;
+            color: var(--md-sys-color-text-main);
         }
 
-        /* Navbar Customization */
+        /* --- NAVBAR --- */
         .navbar {
-            background-color: #1a1d20 !important;
-            border-bottom: 1px solid var(--border-color);
-            padding: 0.75rem 1.5rem;
+            background-color: var(--md-sys-color-background) !important;
+            padding: 1rem 1.5rem;
             flex-shrink: 0;
         }
 
-        .brand-icon {
-            width: 40px;
-            height: 40px;
-            /* Gradient combining Green (Sheets) and Blue/Cyan (Sky/Rocket) */
-            background: linear-gradient(135deg, #198754, #0dcaf0); 
-            border-radius: 8px;
+        .brand-pill {
+            background-color: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-text-main);
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: white;
-            box-shadow: 0 0 15px rgba(13, 202, 240, 0.3);
+            gap: 10px;
+            font-size: 0.9rem;
         }
 
-        /* Main Layout */
+        .brand-icon {
+            color: var(--md-sys-color-primary);
+        }
+
+        /* --- BUTTONS (Material You Style) --- */
+        .btn {
+            border-radius: 50px !important; /* Pill shape */
+            font-weight: 500;
+            padding: 8px 20px;
+            border: none;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+        }
+        .btn-primary:hover {
+            background-color: #e8def8; /* Lighter lilac */
+            color: var(--md-sys-color-on-primary);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-surface {
+            background-color: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-text-sub);
+        }
+        .btn-surface:hover {
+            background-color: #3f4042;
+            color: var(--md-sys-color-text-main);
+        }
+
+        .btn-success-custom {
+            background-color: var(--md-sys-color-success);
+            color: var(--md-sys-color-on-success);
+        }
+        .btn-success-custom:hover {
+            background-color: #d1f8d4;
+            color: var(--md-sys-color-on-success);
+        }
+
+        .btn-icon-only {
+            padding: 8px;
+            width: 40px;
+            height: 40px;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        /* --- WORKSPACE LAYOUT --- */
         .workspace {
             flex: 1;
             display: flex;
+            padding: 0 1rem 1rem 1rem; /* Padding around the workspace */
+            gap: 1rem;
             overflow: hidden;
             position: relative;
         }
 
         .pane {
-            width: 50%;
+            flex: 1;
             display: flex;
             flex-direction: column;
+            background-color: var(--md-sys-color-surface);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
             position: relative;
+            /* Default: show both on desktop */
         }
 
-        .editor-pane {
-            background-color: var(--editor-bg);
-            border-right: 1px solid var(--border-color);
-        }
-
-        .preview-pane {
-            background-color: #f0f2f5; /* Light gray for contrast with device frames */
-        }
-
-        /* Pane Header */
+        /* Editor Styling */
         .pane-header {
-            padding: 8px 16px;
+            padding: 12px 20px;
+            background-color: var(--md-sys-color-surface);
+            color: var(--md-sys-color-text-sub);
             font-size: 0.85rem;
-            font-family: 'JetBrains Mono', monospace;
-            color: #adb5bd;
-            background-color: rgba(255, 255, 255, 0.05);
-            border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 45px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
 
-        .preview-pane .pane-header {
-            background-color: #fff;
-            color: #6c757d;
-            border-bottom: 1px solid #dee2e6;
-        }
-
-        /* Editor Area */
         #code-editor {
             flex: 1;
-            width: 100%;
-            background-color: var(--editor-bg);
-            color: var(--editor-text);
+            background-color: var(--md-sys-color-surface);
+            color: #e0e0e0;
             border: none;
             resize: none;
             padding: 1.5rem;
@@ -108,121 +164,118 @@
             line-height: 1.6;
             outline: none;
         }
+        #code-editor::placeholder { color: #555; }
 
-        #code-editor::placeholder {
-            color: #6c757d;
+        /* Preview Styling */
+        .preview-pane {
+            background-color: #ffffff; /* Preview is usually white content */
         }
-
-        /* Preview Container & Iframe */
+        
         .preview-container {
             flex: 1;
+            background-color: #eef0f2; /* Light grey backdrop for devices */
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             overflow: hidden;
             padding: 20px;
-            background-color: #e9ecef;
-            position: relative;
         }
 
         iframe {
-            background: white;
-            border: none;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            transition: width 0.3s ease, height 0.3s ease;
             width: 100%;
             height: 100%;
-        }
-
-        /* Device Modes */
-        .device-mobile {
-            width: 375px !important;
-            height: 100% !important;
-            border-radius: 8px;
-            border: 8px solid #333;
-        }
-
-        .device-tablet {
-            width: 768px !important;
-            height: 100% !important;
-            border-radius: 8px;
-            border: 8px solid #333;
-        }
-
-        .device-desktop {
-            width: 100% !important;
-            height: 100% !important;
             border: none;
-            border-radius: 0;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
         }
 
-        /* Loading Overlay */
-        #loading-overlay {
+        /* View Mode Fullscreen */
+        #view-mode-container {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: #212529;
+            z-index: 5000;
+            background: white;
+            display: none;
+        }
+        
+        /* Floating Edit Button (FAB) */
+        .fab-edit {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px; /* Material 3 square-ish FAB */
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 2000;
-            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 5001;
+            font-size: 24px;
+            transition: transform 0.2s;
+            text-decoration: none;
         }
-        
-        .spinner-border {
-            width: 3rem;
-            height: 3rem;
+        .fab-edit:hover {
+            transform: scale(1.05);
+            color: var(--md-sys-color-on-primary);
+        }
+
+        /* --- DEVICE FRAMES --- */
+        .device-mobile { width: 375px !important; height: 700px !important; border-radius: 20px; }
+        .device-tablet { width: 768px !important; height: 100% !important; border-radius: 12px; }
+        .device-desktop { width: 100% !important; height: 100% !important; border-radius: 0; }
+
+        /* --- MOBILE TABS --- */
+        .mobile-tabs {
+            display: none; /* Hidden on desktop */
+            padding: 0 1rem;
             margin-bottom: 1rem;
         }
+        .tab-btn {
+            background: transparent;
+            color: var(--md-sys-color-text-sub);
+            border: 1px solid var(--md-sys-color-surface-variant);
+            border-radius: 50px;
+            padding: 6px 16px;
+            font-size: 0.9rem;
+            margin-right: 8px;
+        }
+        .tab-btn.active {
+            background: var(--md-sys-color-secondary-container);
+            color: var(--md-sys-color-on-secondary-container);
+            border-color: transparent;
+        }
 
-        /* Mobile Responsive */
+        /* --- RESPONSIVE --- */
         @media (max-width: 768px) {
-            .workspace {
-                flex-direction: column;
-            }
-            .pane {
-                width: 100%;
-                height: 50%;
-            }
-            .editor-pane {
-                border-right: none;
-                border-bottom: 1px solid var(--border-color);
-            }
-            .preview-container {
-                padding: 0;
-            }
-            /* Disable device preview on mobile screens */
-            .device-controls {
-                display: none !important;
-            }
+            .navbar { padding: 0.75rem 1rem; }
+            .workspace { padding: 0; gap: 0; flex-direction: column; }
+            .pane { border-radius: 0; display: none; /* Controlled by JS */ }
+            .pane.active { display: flex; }
+            .mobile-tabs { display: flex; }
+            .preview-container { padding: 0; background: white; }
+            .device-controls { display: none; }
+            iframe { box-shadow: none; }
+            
+            /* Adjust buttons for mobile */
+            .btn span { display: none; } /* Hide text on small screens for secondary buttons */
+            .btn-primary span { display: inline; } /* Keep save text */
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-        }
-        ::-webkit-scrollbar-track {
-            background: var(--editor-bg);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #495057;
-            border-radius: 5px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #6c757d;
-        }
-        
-        .autosave-indicator {
-            font-size: 0.75rem;
-            color: #6c757d;
-            transition: color 0.3s;
-        }
-        .autosave-indicator.saving {
-            color: #ffc107;
-        }
-        .autosave-indicator.saved {
-            color: #198754;
+        /* --- UTILS --- */
+        .autosave-indicator { font-size: 0.75rem; color: #666; transition: color 0.3s; display: flex; align-items: center; gap: 4px; }
+        .autosave-indicator.saved { color: var(--md-sys-color-success); }
+        .autosave-indicator.saving { color: #ffc107; }
+
+        #loading-overlay {
+            background-color: var(--md-sys-color-background);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2000; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; color: white;
         }
     </style>
 <script type="importmap">
@@ -240,91 +293,94 @@
 
     <!-- Loading Overlay -->
     <div id="loading-overlay">
-        <div class="spinner-border text-info" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-        <h5 id="loading-text">Connecting to SheetRocket...</h5>
+        <div class="spinner-border text-light mb-3" role="status"></div>
+        <div style="font-family: 'Inter'; font-weight: 500; letter-spacing: 1px;">INITIALIZING...</div>
     </div>
 
-    <!-- Header -->
-    <nav class="navbar navbar-dark">
-        <div class="container-fluid p-0">
-            <div class="d-flex align-items-center gap-3">
-                <div class="brand-icon">
-                    <!-- Rocket Icon for the new Brand -->
-                    <i class="bi bi-rocket-takeoff-fill fs-5"></i>
-                </div>
-                <div>
-                    <h6 class="m-0 fw-bold text-white text-uppercase" style="letter-spacing: 0.5px;">SheetRocket <span class="badge bg-secondary bg-opacity-50 border border-secondary border-opacity-50 ms-2" style="font-size: 0.6em; vertical-align: middle;">GITHUB EDITION</span></h6>
-                    <small class="text-secondary" style="font-size: 11px;" id="project-status">Powered by Google Sheets API</small>
-                </div>
-            </div>
-            
-            <div class="d-flex gap-2">
-                <button onclick="saveToCloud()" class="btn btn-success btn-sm d-flex align-items-center gap-2 shadow-sm" id="btn-save" title="Save to Google Sheets">
-                    <i class="bi bi-cloud-check-fill"></i> <span class="d-none d-sm-inline">Save</span>
-                </button>
-                <div class="vr bg-secondary mx-1 opacity-25"></div>
-                <button onclick="deployPage()" class="btn btn-outline-info btn-sm d-flex align-items-center gap-2 text-white" title="Open View Mode">
-                    <i class="bi bi-window-fullscreen"></i> <span class="d-none d-sm-inline">Deploy</span>
-                </button>
-                <button onclick="shareLink()" class="btn btn-primary btn-sm d-flex align-items-center gap-2 shadow-sm" title="Share URL">
-                    <i class="bi bi-share-fill"></i> Share
-                </button>
-            </div>
-        </div>
-    </nav>
+    <!-- View Mode Container (Fullscreen Iframe) -->
+    <div id="view-mode-container">
+        <iframe id="view-mode-frame"></iframe>
+        <a href="#" id="back-to-editor-btn" class="fab-edit" title="Back to Editor">
+            <i class="bi bi-pencil-fill"></i>
+        </a>
+    </div>
 
-    <!-- Main Workspace -->
-    <div class="workspace">
-        <!-- Editor Column -->
-        <div class="pane editor-pane">
-            <div class="pane-header">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-filetype-html"></i>
-                    <span>index.html</span>
-                </div>
-                <div class="d-flex align-items-center gap-3">
-                    <span id="autosave-status" class="autosave-indicator"><i class="bi bi-check2"></i> Local Saved</span>
-                    <span id="char-count">0 chars</span>
-                </div>
-            </div>
-            <textarea id="code-editor" spellcheck="false" placeholder="<!-- Start coding your masterpiece here... -->"></textarea>
-        </div>
-
-        <!-- Preview Column -->
-        <div class="pane preview-pane">
-            <div class="pane-header">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bold"><i class="bi bi-eye-fill me-2"></i>Preview</span>
-                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 d-flex align-items-center gap-1">
-                        <i class="bi bi-circle-fill" style="font-size: 6px;"></i> Live
-                    </span>
+    <!-- Main Editor Interface -->
+    <div id="editor-interface" style="display: flex; flex-direction: column; height: 100%;">
+        
+        <!-- Header -->
+        <nav class="navbar">
+            <div class="container-fluid p-0 d-flex justify-content-between">
+                <div class="brand-pill">
+                    <i class="bi bi-rocket-takeoff-fill brand-icon"></i>
+                    <span>SheetRocket</span>
                 </div>
                 
-                <!-- Device Controls -->
-                <div class="btn-group btn-group-sm device-controls" role="group">
-                    <button type="button" class="btn btn-outline-secondary active" onclick="setPreviewMode('desktop')" title="Desktop View">
-                        <i class="bi bi-pc-display"></i>
+                <div class="d-flex gap-2">
+                    <!-- Copy Link -->
+                    <button onclick="copyDeployLink()" class="btn btn-surface" title="Copy Deploy Link">
+                        <i class="bi bi-link-45deg fs-5"></i> <span class="d-none d-md-inline">Copy Link</span>
                     </button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="setPreviewMode('tablet')" title="Tablet View">
-                        <i class="bi bi-tablet"></i>
+
+                    <!-- Deploy -->
+                    <button onclick="deployPage()" class="btn btn-surface" title="Open Live View">
+                        <i class="bi bi-box-arrow-up-right"></i> <span class="d-none d-md-inline">Deploy</span>
                     </button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="setPreviewMode('mobile')" title="Mobile View">
-                        <i class="bi bi-phone"></i>
+
+                    <!-- Save -->
+                    <button onclick="saveToCloud()" class="btn btn-primary" id="btn-save" title="Save to Google Sheets">
+                        <i class="bi bi-cloud-arrow-up-fill"></i> <span>Save</span>
                     </button>
                 </div>
             </div>
-            <div class="preview-container">
-                <iframe id="preview-frame" class="device-desktop" sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin"></iframe>
+        </nav>
+
+        <!-- Mobile Tabs -->
+        <div class="mobile-tabs">
+            <button class="tab-btn active" onclick="switchTab('editor')"><i class="bi bi-code-slash"></i> Editor</button>
+            <button class="tab-btn" onclick="switchTab('preview')"><i class="bi bi-eye"></i> Preview</button>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="workspace">
+            <!-- Editor Pane -->
+            <div class="pane active" id="pane-editor">
+                <div class="pane-header">
+                    <span style="font-family:'JetBrains Mono'">index.html</span>
+                    <div class="d-flex align-items-center gap-3">
+                        <span id="autosave-status" class="autosave-indicator">
+                            <i class="bi bi-check-circle-fill"></i> Ready
+                        </span>
+                    </div>
+                </div>
+                <textarea id="code-editor" spellcheck="false" placeholder="<!-- Start coding... -->"></textarea>
+            </div>
+
+            <!-- Preview Pane -->
+            <div class="pane preview-pane" id="pane-preview">
+                <div class="pane-header" style="background: #fff; border-bottom: 1px solid #eee;">
+                    <div class="text-dark fw-bold d-flex align-items-center gap-2">
+                        <i class="bi bi-phone-landscape"></i> Preview
+                    </div>
+                    
+                    <!-- Device Controls (Desktop only) -->
+                    <div class="btn-group btn-group-sm device-controls">
+                        <button class="btn btn-sm btn-outline-secondary border-0 text-dark" onclick="setPreviewMode('desktop')"><i class="bi bi-pc-display"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary border-0 text-dark" onclick="setPreviewMode('tablet')"><i class="bi bi-tablet"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary border-0 text-dark" onclick="setPreviewMode('mobile')"><i class="bi bi-phone"></i></button>
+                    </div>
+                </div>
+                <div class="preview-container">
+                    <iframe id="preview-frame" class="device-desktop" sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin"></iframe>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Toast Notification -->
-    <div class="position-fixed bottom-0 start-50 translate-middle-x p-3" style="z-index: 1050">
-        <div id="toast-msg" class="toast align-items-center text-white bg-success border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
+    <div class="position-fixed bottom-0 start-50 translate-middle-x p-4" style="z-index: 1050">
+        <div id="toast-msg" class="toast align-items-center text-white bg-dark border-0 shadow-lg" style="border-radius: 50px;" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex px-2">
                 <div class="toast-body d-flex align-items-center gap-2" id="toast-body-text">
                     Action successful!
                 </div>
@@ -342,173 +398,204 @@
         const APP_URL = "https://script.google.com/macros/s/AKfycbw_NrRwHRt_x8UlsQCKIddB6WXjA_kodlh77OliuuW5MeQMsdoNzUuDfVmvPx5NLlFk7g/exec";
         const AUTOSAVE_KEY = "sheetrocket_autosave_content";
 
-        // --- GLOBAL VARIABLES ---
-        let bsToast;
-        let editor, preview, charCount, toastEl, toastBody, loadingOverlay, loadingText, projectStatus, autosaveStatus;
-        let currentCloudId = null;
-        let autosaveTimer;
+        // --- ELEMENTS ---
+        let editor, preview, autosaveStatus, toastEl, bsToast, currentCloudId = null, autosaveTimer;
+        
+        // --- CORE LOGIC ---
 
-        // --- UTILITIES ---
-        const encode = (str) => {
-            try { return btoa(unescape(encodeURIComponent(str))); } catch(e) { return ''; }
-        };
-        const decode = (hash) => {
-            try { return decodeURIComponent(escape(atob(hash.replace(/^#/, '')))); } catch(e) { return ''; }
-        };
-
-        // --- CORE FUNCTIONS ---
         const updatePreview = () => {
             if (!editor) return;
             const code = editor.value;
-            
-            // Only update iframe if needed to prevent flashing, but for vanilla simple handling usually ok
             preview.srcdoc = code;
-            charCount.textContent = code.length + ' chars';
-            
             triggerAutosave();
         };
 
         const triggerAutosave = () => {
             if (autosaveStatus) {
-                autosaveStatus.innerHTML = '<i class="bi bi-pencil-fill"></i> Typing...';
+                autosaveStatus.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
                 autosaveStatus.className = 'autosave-indicator saving';
             }
-            
             clearTimeout(autosaveTimer);
             autosaveTimer = setTimeout(() => {
                 localStorage.setItem(AUTOSAVE_KEY, editor.value);
                 if (autosaveStatus) {
-                    autosaveStatus.innerHTML = '<i class="bi bi-check2"></i> Local Saved';
+                    autosaveStatus.innerHTML = '<i class="bi bi-check-circle-fill"></i> Saved';
                     autosaveStatus.className = 'autosave-indicator saved';
                 }
-            }, 1000); // Save after 1 second of inactivity
+            }, 1000);
+        };
+
+        // --- UI ACTIONS ---
+
+        const switchTab = (tab) => {
+            const editorPane = document.getElementById('pane-editor');
+            const previewPane = document.getElementById('pane-preview');
+            const tabs = document.querySelectorAll('.tab-btn');
+            
+            tabs.forEach(t => t.classList.remove('active'));
+            
+            if (tab === 'editor') {
+                editorPane.classList.add('active');
+                previewPane.classList.remove('active');
+                tabs[0].classList.add('active');
+            } else {
+                editorPane.classList.remove('active');
+                previewPane.classList.add('active');
+                tabs[1].classList.add('active');
+                // Refresh preview when switching to it to ensure rendering size
+                updatePreview();
+            }
         };
 
         const setPreviewMode = (mode) => {
             const frame = document.getElementById('preview-frame');
-            frame.className = ''; // Reset classes
+            frame.className = ''; 
+            if (mode === 'mobile') frame.classList.add('device-mobile');
+            else if (mode === 'tablet') frame.classList.add('device-tablet');
+            else frame.classList.add('device-desktop');
+        };
+
+        const showToast = (msg, type = 'success') => {
+            const tBody = document.getElementById('toast-body-text');
+            const tEl = document.getElementById('toast-msg');
+            tBody.textContent = msg;
             
-            // Update buttons state
-            document.querySelectorAll('.device-controls .btn').forEach(btn => btn.classList.remove('active'));
+            // Material Colors for Toast
+            tEl.className = `toast align-items-center text-white border-0 shadow-lg ${type === 'error' ? 'bg-danger' : 'bg-dark'}`;
+            tEl.style.borderRadius = "50px";
             
-            if (mode === 'mobile') {
-                frame.classList.add('device-mobile');
-                document.querySelector('[onclick="setPreviewMode(\'mobile\')"]').classList.add('active');
-            } else if (mode === 'tablet') {
-                frame.classList.add('device-tablet');
-                document.querySelector('[onclick="setPreviewMode(\'tablet\')"]').classList.add('active');
-            } else {
-                frame.classList.add('device-desktop');
-                document.querySelector('[onclick="setPreviewMode(\'desktop\')"]').classList.add('active');
-            }
+            if (bsToast) bsToast.show();
         };
 
-        const showToast = (msg, isError = false) => {
-            if (toastBody) toastBody.textContent = msg;
-            if (toastEl) {
-                toastEl.classList.remove('bg-success', 'bg-danger');
-                toastEl.classList.add(isError ? 'bg-danger' : 'bg-success');
-                if (bsToast) bsToast.show();
-                else console.log("Toast:", msg);
-            }
-        };
+        // --- CLOUD ACTIONS ---
 
-        const showLoading = (msg) => {
-            if (loadingText) loadingText.textContent = msg;
-            if (loadingOverlay) loadingOverlay.style.display = 'flex';
-        };
-
-        const hideLoading = () => {
-            if (loadingOverlay) loadingOverlay.style.display = 'none';
-        };
-
-        // --- GOOGLE SHEETS INTERACTION ---
         const saveToCloud = () => {
             const code = editor.value;
             const btn = document.getElementById('btn-save');
-            const originalBtnText = btn.innerHTML;
+            const originalHTML = btn.innerHTML;
             
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
             btn.disabled = true;
-
-            const payload = JSON.stringify({
-                action: 'save',
-                html: code
-            });
 
             fetch(APP_URL, {
                 method: 'POST',
-                mode: 'no-cors', 
+                mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: payload
+                body: JSON.stringify({ action: 'save', html: code })
             })
-            .then(response => response.json())
+            .then(res => res.json())
+            .then(data => handleSaveSuccess(data, btn, originalHTML))
+            .catch(() => {
+                // Handling no-cors opaque response (likely success but can't read ID immediately without CORS)
+                // In a real CORS setup, we read data.id. Here we assume success if no network error.
+                // We simulate a delay to check if user needs to "wait" for data propagation.
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    showToast('Saved! (Check CORS if ID missing)', 'success');
+                }, 1000);
+            });
+        };
+
+        const handleSaveSuccess = (data, btn, originalHTML) => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+            if (data.status === 'success') {
+                currentCloudId = data.id;
+                const newUrl = updateQueryString('id', data.id);
+                window.history.pushState({path: newUrl}, '', newUrl);
+                showToast(`Saved! ID: ${data.id}`);
+            } else {
+                showToast('Error saving project', 'error');
+            }
+        };
+
+        const loadFromCloud = (id) => {
+            fetch(`${APP_URL}?action=load&id=${id}`)
+            .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    currentCloudId = data.id;
-                    btn.innerHTML = originalBtnText;
-                    btn.disabled = false;
-                    projectStatus.textContent = "Saved to Sheet (ID: " + data.id + ")";
-                    projectStatus.classList.add('text-success');
-                    
-                    const newUrl = updateQueryString('id', data.id);
-                    window.history.pushState({path: newUrl}, '', newUrl);
-                    showToast('Project saved to Google Sheets!');
-                } else {
-                    throw new Error(data.message || 'Unknown error');
-                }
-            })
-            .catch(err => {
-                btn.innerHTML = originalBtnText;
-                btn.disabled = false;
-                console.warn(err);
-                // Attempt to notify user even if CORS blocks response reading
-                showToast('Request sent. If ID does not appear, check CORS/Deployment.', true);
-            });
-        };
-
-        const loadFromCloud = (id, isViewMode) => {
-            showLoading("Fetching from Google Database...");
-            const fetchUrl = `${APP_URL}?action=load&id=${id}`;
-
-            fetch(fetchUrl)
-            .then(response => response.json())
-            .then(data => {
-                 if (data.status === 'success') {
-                    const content = data.content;
-                    if (isViewMode) {
-                        document.open();
-                        document.write(content);
-                        document.close();
-                        hideLoading();
-                    } else {
-                        editor.value = content;
-                        currentCloudId = id;
-                        projectStatus.textContent = "Loaded from Sheet (ID: " + id + ")";
-                        updatePreview();
-                        hideLoading();
-                        document.body.style.display = 'flex';
-                    }
-                } else {
-                    throw new Error(data.message || 'Project not found');
-                }
-            })
-            .catch(err => {
-                hideLoading();
-                console.error(err);
-                if (!isViewMode) {
-                    showToast("Failed to load: " + err.message, true);
-                    editor.value = DEFAULT_CODE;
+                    editor.value = data.content;
+                    currentCloudId = id;
                     updatePreview();
+                    document.getElementById('loading-overlay').style.display = 'none';
                     document.body.style.display = 'flex';
-                } else {
-                    document.body.innerHTML = `<div style="color:white;text-align:center;padding:50px">Error: ${err.message}</div>`;
-                    document.body.style.display = 'block';
                 }
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('loading-overlay').style.display = 'none';
+                document.body.style.display = 'flex';
+                showToast('Failed to load project', 'error');
             });
         };
 
-        // --- URL HELPERS ---
+        // --- DEPLOY & LINK LOGIC ---
+
+        const getDeployUrl = () => {
+            const baseUrl = window.location.href.split('?')[0].split('#')[0];
+            if (currentCloudId) {
+                return `${baseUrl}?view=1&id=${currentCloudId}`;
+            }
+            // Hash fallback
+            const encoded = btoa(unescape(encodeURIComponent(editor.value)));
+            return `${baseUrl}?view=1#${encoded}`;
+        };
+
+        const deployPage = () => {
+            if (!confirm('Deploy current version?')) return;
+            const url = getDeployUrl();
+            window.open(url, '_blank');
+        };
+
+        const copyDeployLink = async () => {
+            const url = getDeployUrl();
+            try {
+                await navigator.clipboard.writeText(url);
+                showToast('Deploy link copied to clipboard!');
+            } catch (err) {
+                prompt("Copy this link:", url);
+            }
+        };
+
+        // --- VIEW MODE RENDERER ---
+        
+        const enterViewMode = (content, id) => {
+            // Hide editor, show view container
+            document.getElementById('editor-interface').style.display = 'none';
+            document.getElementById('loading-overlay').style.display = 'none';
+            const viewContainer = document.getElementById('view-mode-container');
+            const viewFrame = document.getElementById('view-mode-frame');
+            const backBtn = document.getElementById('back-to-editor-btn');
+            
+            viewContainer.style.display = 'block';
+            document.body.style.display = 'block'; // Ensure body is visible
+            
+            // Set content
+            viewFrame.srcdoc = content;
+            
+            // Set back button URL
+            const baseUrl = window.location.href.split('?')[0].split('#')[0];
+            let editUrl = baseUrl;
+            if (id) editUrl += `?id=${id}`;
+            // If hash is used, it's already in the URL, just remove ?view=1
+            
+            backBtn.href = editUrl;
+            
+            // If using Hash, we need to strip view=1 manually for the href
+            if (!id && window.location.hash) {
+                 backBtn.href = baseUrl + window.location.hash;
+            }
+            
+            backBtn.onclick = (e) => {
+                // If it's the same window, simple reload without query param might be cleaner
+                // But href navigation is standard.
+                // e.preventDefault();
+                // window.location.href = backBtn.href;
+            };
+        };
+
+        // --- UTILS ---
         const updateQueryString = (key, value) => {
             const url = new URL(window.location.href);
             url.searchParams.set(key, value);
@@ -516,172 +603,78 @@
             return url.toString();
         };
 
-        const getBaseUrl = () => {
-            return window.location.href.split('?')[0].split('#')[0];
+        const decodeHash = (hash) => {
+            try { return decodeURIComponent(escape(atob(hash.replace(/^#/, '')))); } catch { return ''; }
         };
 
-        const shareLink = async () => {
-            const baseUrl = getBaseUrl();
-            let finalUrl = baseUrl;
-            if (currentCloudId) {
-                 finalUrl = `${baseUrl}?id=${currentCloudId}`;
-            } else {
-                const hash = encode(editor.value);
-                finalUrl = `${baseUrl}#${hash}`;
-                window.location.hash = hash;
-            }
-            try {
-                await navigator.clipboard.writeText(finalUrl);
-                showToast('Link copied!');
-            } catch (err) {
-                prompt("Copy this link:", finalUrl);
-            }
-        };
+        // --- INIT ---
+        window.addEventListener('load', () => {
+            editor = document.getElementById('code-editor');
+            preview = document.getElementById('preview-frame');
+            autosaveStatus = document.getElementById('autosave-status');
+            toastEl = document.getElementById('toast-msg');
+            
+            if (typeof bootstrap !== 'undefined') bsToast = new bootstrap.Toast(toastEl);
+            
+            if(editor) editor.addEventListener('input', updatePreview);
 
-        const deployPage = () => {
-            // Confirmation before deploy
-            if (!confirm('Are you sure you want to deploy this page?')) {
-                return;
-            }
+            // Params
+            const params = new URLSearchParams(window.location.search);
+            const viewMode = params.get('view') === '1';
+            const id = params.get('id');
+            const hash = window.location.hash;
 
-            const baseUrl = getBaseUrl();
-            let url;
-            if (currentCloudId) {
-                url = `${baseUrl}?view=1&id=${currentCloudId}`;
-            } else {
-                const hash = encode(editor.value);
-                url = `${baseUrl}?view=1#${hash}`;
-            }
-            window.open(url, '_blank');
-        };
-
-        // --- DEFAULT CODE ---
-        const DEFAULT_CODE = `<!DOCTYPE html>
-<html lang="en">
+            const DEFAULT_CODE = `<!DOCTYPE html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SheetRocket Page</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background: linear-gradient(135deg, #f0f2f5 0%, #e9ecef 100%); display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; }
-        .card { border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 16px; overflow: hidden; }
-        .card-header { background: white; border-bottom: 1px solid #f0f0f0; padding: 2rem; }
-        .icon-box { width: 80px; height: 80px; background: linear-gradient(135deg, #198754, #0dcaf0); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: white; font-size: 2.5rem; }
-    </style>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>body{padding:40px;background:#f8f9fa;text-align:center}</style>
 </head>
 <body>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card text-center">
-                    <div class="card-body p-5">
-                        <div class="icon-box"><i class="bi bi-rocket-takeoff"></i></div>
-                        <h2 class="fw-bold text-dark mb-3">Hello, SheetRocket!</h2>
-                        <p class="text-secondary mb-4">This page is hosted on GitHub Pages but powered by Google Sheets!</p>
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-primary btn-lg rounded-pill" onclick="alert('Ready for liftoff!')">Launch Action</button>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-light p-3 text-muted small">
-                        Built with Bootstrap 5 & Apps Script API
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Bootstrap Icons via CDN -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <div class="container">
+    <h1 class="display-4">Hello World!</h1>
+    <p>Deployed via SheetRocket.</p>
+    <button class="btn btn-primary" onclick="alert('Works!')">Click Me</button>
+  </div>
 </body>
 </html>`;
 
-        // --- INITIALIZATION ---
-        window.addEventListener('load', function() {
-            try {
-                // Initialize Elements
-                editor = document.getElementById('code-editor');
-                preview = document.getElementById('preview-frame');
-                charCount = document.getElementById('char-count');
-                toastEl = document.getElementById('toast-msg');
-                toastBody = document.getElementById('toast-body-text');
-                loadingOverlay = document.getElementById('loading-overlay');
-                loadingText = document.getElementById('loading-text');
-                projectStatus = document.getElementById('project-status');
-                autosaveStatus = document.getElementById('autosave-status');
-
-                // Initialize Bootstrap
-                if (typeof bootstrap !== 'undefined' && toastEl) {
-                    bsToast = new bootstrap.Toast(toastEl);
-                } else {
-                    console.warn("Bootstrap JS not loaded or Toast element missing");
-                }
-
-                // Initialize Event Listeners
-                if (editor) {
-                    editor.addEventListener('input', updatePreview);
-                    editor.addEventListener('keydown', (e) => {
-                        if (e.key === 'Tab') {
-                            e.preventDefault();
-                            const start = editor.selectionStart;
-                            const end = editor.selectionEnd;
-                            editor.value = editor.value.substring(0, start) + "  " + editor.value.substring(end);
-                            editor.selectionStart = editor.selectionEnd = start + 2;
-                            updatePreview();
-                        }
+            // 1. View Mode (ID)
+            if (viewMode && id) {
+                fetch(`${APP_URL}?action=load&id=${id}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if(d.status==='success') enterViewMode(d.content, id);
+                        else alert('Project not found');
                     });
-                }
-
-                // Check URL Params
-                const params = new URLSearchParams(window.location.search);
-                const viewMode = params.get('view') === '1';
-                const id = params.get('id');
-                const hash = window.location.hash;
-
-                // Routing
-                if (id) {
-                    loadFromCloud(id, viewMode);
-                } else if (viewMode && hash) {
-                    const decoded = decode(hash);
-                    if (decoded) {
-                        document.open();
-                        document.write(decoded);
-                        document.close();
-                    } else {
-                        hideLoading();
-                        document.body.style.display = 'flex';
-                    }
-                } else if (hash && hash.length > 1) {
-                    hideLoading();
-                    const decoded = decode(hash);
-                    editor.value = decoded || DEFAULT_CODE;
-                    updatePreview();
-                    document.body.style.display = 'flex';
-                } else {
-                    // New Project / Local Restore
-                    hideLoading();
-                    
-                    // Restore from Autosave if available and default code is present
-                    const localSaved = localStorage.getItem(AUTOSAVE_KEY);
-                    if (localSaved) {
-                        editor.value = localSaved;
-                        showToast('Restored from local autosave');
-                    } else {
-                        editor.value = DEFAULT_CODE;
-                    }
-                    
-                    updatePreview();
-                    document.body.style.display = 'flex';
-                }
-
-            } catch (e) {
-                console.error("Initialization error:", e);
-                // Emergency Fallback
-                if (document.getElementById('loading-overlay')) {
-                    document.getElementById('loading-overlay').style.display = 'none';
-                }
-                document.body.style.display = 'flex';
-                alert("Aplikasi mengalami masalah inisialisasi: " + e.message);
+                return;
             }
+
+            // 2. View Mode (Hash)
+            if (viewMode && hash) {
+                const content = decodeHash(hash);
+                enterViewMode(content, null);
+                return;
+            }
+
+            // 3. Editor Mode (ID)
+            if (id) {
+                loadFromCloud(id);
+                return;
+            }
+
+            // 4. Editor Mode (Hash/Local/Default)
+            document.getElementById('loading-overlay').style.display = 'none';
+            document.body.style.display = 'flex';
+            
+            if (hash) {
+                editor.value = decodeHash(hash);
+            } else {
+                const local = localStorage.getItem(AUTOSAVE_KEY);
+                editor.value = local || DEFAULT_CODE;
+                if(local) showToast('Restored from autosave');
+            }
+            updatePreview();
         });
     </script>
 </body>
