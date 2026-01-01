@@ -1,406 +1,343 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InstantDeploy - AI HTML Builder</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <title>HTML Share - Single File Editor</title>
     
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
     <style>
-        /* App Layout */
-        html, body { height: 100%; overflow: hidden; }
-        .navbar { height: 64px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .main-container { height: calc(100vh - 64px); }
-        
-        /* Editor Styles */
-        .editor-container { 
-            background-color: #1e1e1e; 
-            display: flex; 
-            flex-direction: column; 
-        }
-        .editor-header {
-            background-color: #252526;
-            padding: 6px 16px;
-            font-family: monospace;
-            font-size: 0.8rem;
-            color: #9cdcfe;
-            border-bottom: 1px solid #333;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        #code-editor {
-            flex: 1;
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-            border: none;
-            resize: none;
-            padding: 16px;
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            outline: none;
-            white-space: pre;
-            overflow-wrap: normal;
-            overflow-x: auto;
+        :root {
+            --editor-bg: #1e1e1e;
+            --editor-text: #d4d4d4;
+            --border-color: #343a40;
         }
 
-        /* Preview Styles */
-        .preview-container { background-color: white; display: flex; flex-direction: column; }
-        .preview-header {
-            background-color: #f8f9fa;
-            color: #6c757d;
-            padding: 4px 12px;
-            font-size: 0.75rem;
-            border-bottom: 1px solid #dee2e6;
-            text-align: right;
-        }
-        iframe { flex: 1; width: 100%; border: none; }
-
-        /* View Modes */
-        .view-split .pane { width: 50%; }
-        .view-editor .pane-editor { width: 100%; }
-        .view-editor .pane-preview { display: none; }
-        .view-preview .pane-preview { width: 100%; }
-        .view-preview .pane-editor { display: none; }
-
-        /* Loading Overlay */
-        .loading-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.7);
+        body {
+            background-color: #212529;
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
+            color: #f8f9fa;
+        }
+
+        /* Navbar Customization */
+        .navbar {
+            background-color: #1a1d20 !important;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #0d6efd, #0a58ca);
+            border-radius: 8px;
+            display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1050;
-            backdrop-filter: blur(2px);
+            color: white;
+        }
+
+        /* Main Layout */
+        .workspace {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .pane {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .editor-pane {
+            background-color: var(--editor-bg);
+            border-right: 1px solid var(--border-color);
+        }
+
+        .preview-pane {
+            background-color: white;
+        }
+
+        /* Pane Header */
+        .pane-header {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: #adb5bd;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preview-pane .pane-header {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        /* Editor Area */
+        #code-editor {
+            flex: 1;
+            width: 100%;
+            background-color: var(--editor-bg);
+            color: var(--editor-text);
+            border: none;
+            resize: none;
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            outline: none;
+        }
+
+        #code-editor::placeholder {
+            color: #6c757d;
+        }
+
+        /* Preview Iframe */
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .workspace {
+                flex-direction: column;
+            }
+            .pane {
+                width: 100%;
+                height: 50%;
+            }
+            .editor-pane {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--editor-bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #495057;
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6c757d;
         }
     </style>
-    
-    <script type="importmap">
-    {
-      "imports": {
-        "@google/genai": "https://esm.sh/@google/genai@0.0.2",
-        "lz-string": "https://esm.sh/lz-string@1.5.0"
-      }
-    }
-    </script>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
+  }
+}
+</script>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-md bg-body-tertiary px-3">
-        <div class="d-flex align-items-center gap-2 me-3">
-            <div class="bg-primary rounded p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                <i class="bi bi-rocket-takeoff-fill text-white"></i>
-            </div>
-            <span class="navbar-brand mb-0 h1 d-none d-sm-block">InstantDeploy</span>
-        </div>
 
-        <!-- AI Input Form -->
-        <form id="ai-form" class="flex-grow-1 mx-2 position-relative">
-            <div class="input-group input-group-sm">
-                <span class="input-group-text border-secondary-subtle">
-                    <i class="bi bi-stars text-warning"></i>
-                </span>
-                <input type="text" id="prompt-input" class="form-control border-secondary-subtle" 
-                    placeholder="Describe a web page to generate (e.g., 'Modern Portfolio')..." autocomplete="off">
-                
-                <button class="btn btn-outline-secondary border-secondary-subtle" type="button" data-bs-toggle="modal" data-bs-target="#refineModal" title="Refine Prompt">
-                    <i class="bi bi-sliders"></i>
+    <!-- Header -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid p-0">
+            <div class="d-flex align-items-center gap-3">
+                <div class="brand-icon">
+                    <i class="bi bi-code-slash fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="m-0 fw-bold text-white">HTML Share</h6>
+                    <small class="text-secondary" style="font-size: 12px;">Single File Editor</small>
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button onclick="downloadCode()" class="btn btn-outline-light btn-sm d-flex align-items-center gap-2">
+                    <i class="bi bi-download"></i> <span class="d-none d-sm-inline">Download</span>
                 </button>
-                
-                <button class="btn btn-primary" type="submit" id="btn-generate">
-                    Generate
+                <button onclick="shareLink()" class="btn btn-primary btn-sm d-flex align-items-center gap-2 shadow-sm">
+                    <i class="bi bi-share-fill"></i> Share
                 </button>
             </div>
-        </form>
-
-        <!-- Toolbar -->
-        <div class="d-flex gap-2 ms-2">
-            <!-- View Toggles -->
-            <div class="btn-group btn-group-sm d-none d-md-inline-flex" role="group">
-                <input type="radio" class="btn-check" name="viewmode" id="mode-editor" autocomplete="off" onchange="setView('editor')">
-                <label class="btn btn-outline-secondary" for="mode-editor" title="Editor Only"><i class="bi bi-code-slash"></i></label>
-
-                <input type="radio" class="btn-check" name="viewmode" id="mode-split" autocomplete="off" checked onchange="setView('split')">
-                <label class="btn btn-outline-secondary" for="mode-split" title="Split View"><i class="bi bi-layout-split"></i></label>
-
-                <input type="radio" class="btn-check" name="viewmode" id="mode-preview" autocomplete="off" onchange="setView('preview')">
-                <label class="btn btn-outline-secondary" for="mode-preview" title="Preview Only"><i class="bi bi-display"></i></label>
-            </div>
-
-            <!-- Share Button -->
-            <button class="btn btn-sm btn-success d-flex align-items-center gap-2" onclick="handleShare()">
-                <i class="bi bi-share-fill"></i> <span class="d-none d-lg-inline">Share</span>
-            </button>
         </div>
     </nav>
 
     <!-- Main Workspace -->
-    <div id="workspace" class="main-container d-flex view-split position-relative">
-        
-        <!-- Editor Pane -->
-        <div class="pane pane-editor editor-container border-end border-secondary">
-            <div class="editor-header">
-                <span><i class="bi bi-filetype-html me-1"></i> index.html</span>
-                <span class="badge bg-secondary opacity-50">Editable</span>
+    <div class="workspace">
+        <!-- Editor Column -->
+        <div class="pane editor-pane">
+            <div class="pane-header">
+                <span><i class="bi bi-filetype-html me-2"></i>index.html</span>
+                <span id="char-count">0 chars</span>
             </div>
-            <textarea id="code-editor" spellcheck="false" placeholder="<!-- Enter your HTML code here -->"></textarea>
+            <textarea id="code-editor" spellcheck="false" placeholder="<!-- Start typing HTML here... -->"></textarea>
         </div>
 
-        <!-- Preview Pane -->
-        <div class="pane pane-preview preview-container">
-            <div class="preview-header">
-                <span class="badge text-bg-light border text-dark">Live Preview</span>
+        <!-- Preview Column -->
+        <div class="pane preview-pane">
+            <div class="pane-header">
+                <span class="fw-bold"><i class="bi bi-window me-2"></i>Preview</span>
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 d-flex align-items-center gap-1">
+                    <i class="bi bi-circle-fill" style="font-size: 6px;"></i> Live
+                </span>
             </div>
-            <iframe id="preview-frame" sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups"></iframe>
-        </div>
-
-        <!-- Loading Overlay -->
-        <div id="loader" class="loading-overlay d-none">
-            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
-            <h5 class="text-white">Generating Code...</h5>
-            <p class="text-white-50">Asking Gemini to write HTML</p>
-        </div>
-    </div>
-
-    <!-- Refine Modal -->
-    <div class="modal fade" id="refineModal" tabindex="-1" aria-labelledby="refineModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content bg-dark text-light border-secondary">
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title" id="refineModalLabel">Refine Generation</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="refine-context" class="form-label text-white-50">Additional Instructions / Constraints</label>
-                        <textarea class="form-control bg-black text-light border-secondary" id="refine-context" rows="5" placeholder="E.g.,&#10;- Use a dark theme&#10;- Include a contact form&#10;- Use Bootstrap classes&#10;- Make it mobile responsive"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Save</button>
-                </div>
-            </div>
+            <iframe id="preview-frame" sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin"></iframe>
         </div>
     </div>
 
     <!-- Toast Notification -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3">
-        <div id="liveToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="position-fixed bottom-0 start-50 translate-middle-x p-3" style="z-index: 1050">
+        <div id="toast-msg" class="toast align-items-center text-white bg-success border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi bi-check-circle-fill me-2"></i> URL copied to clipboard!
+                <div class="toast-body d-flex align-items-center gap-2" id="toast-body-text">
+                    Link copied to clipboard!
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     </div>
 
-    <!-- Application Logic -->
-    <script type="module">
-        import { GoogleGenAI } from "@google/genai";
-        import LZString from "lz-string";
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-        // DEFAULT TEMPLATE
+    <!-- App Logic -->
+    <script>
+        // DOM Elements
+        const editor = document.getElementById('code-editor');
+        const preview = document.getElementById('preview-frame');
+        const charCount = document.getElementById('char-count');
+        const toastEl = document.getElementById('toast-msg');
+        const toastBody = document.getElementById('toast-body-text');
+        const bsToast = new bootstrap.Toast(toastEl);
+
+        // Default Template
         const DEFAULT_CODE = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Page</title>
+    <title>Bootstrap 5 Page</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-            height: 100vh;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-        }
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            color: #333;
-            padding: 2.5rem;
-            border-radius: 1rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            text-align: center;
-            max-width: 500px;
-        }
-        h1 { margin-top: 0; color: #1a2a6c; }
-        .btn {
-            display: inline-block;
-            margin-top: 1rem;
-            padding: 0.75rem 1.5rem;
-            background: #1a2a6c;
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        .btn:hover { background: #2c3e50; transform: translateY(-2px); }
+        body { background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .card { border: none; shadow: 0 4px 6px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>It Works!</h1>
-        <p>This is a single-file AI web builder. Edit the code on the left or use the top bar to generate a new design.</p>
-        <a href="#" class="btn" onclick="alert('Hello!')">Click Me</a>
+    <div class="container text-center">
+        <div class="card p-5">
+            <h1 class="display-4 text-primary fw-bold mb-3">Hello World!</h1>
+            <p class="lead text-secondary mb-4">This is a live preview of your HTML code.</p>
+            <button class="btn btn-primary btn-lg" onclick="alert('It works!')">Click Me</button>
+        </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"><\/script>
 </body>
 </html>`;
 
-        // ELEMENTS
-        const editor = document.getElementById('code-editor');
-        const previewFrame = document.getElementById('preview-frame');
-        const workspace = document.getElementById('workspace');
-        const loader = document.getElementById('loader');
-        const aiForm = document.getElementById('ai-form');
-        const promptInput = document.getElementById('prompt-input');
-        const refineContext = document.getElementById('refine-context');
-        
-        let isGenerating = false;
-
-        // --- 1. Init ---
-        function init() {
-            const hash = window.location.hash;
-            if (hash.startsWith('#code=')) {
-                try {
-                    const compressed = hash.substring(6);
-                    const decompressed = LZString.decompressFromEncodedURIComponent(compressed);
-                    editor.value = decompressed || DEFAULT_CODE;
-                } catch (e) {
-                    console.error("State load error:", e);
-                    editor.value = DEFAULT_CODE;
-                }
-            } else {
-                editor.value = DEFAULT_CODE;
-            }
-            updatePreview();
-        }
-
-        // --- 2. Preview ---
-        function updatePreview() {
-            const code = editor.value;
-            const doc = previewFrame.contentDocument;
-            if (doc) {
-                doc.open();
-                doc.write(code);
-                doc.close();
-            }
-        }
-
-        // --- 3. View Handling ---
-        window.setView = (mode) => {
-            workspace.className = `main-container d-flex position-relative view-${mode}`;
+        // Encoding Utilities
+        const encode = (str) => {
+            try { return btoa(unescape(encodeURIComponent(str))); } 
+            catch(e) { return ''; }
         };
 
-        // --- 4. Share ---
-        window.handleShare = async () => {
+        const decode = (hash) => {
+            try { return decodeURIComponent(escape(atob(hash.replace(/^#/, '')))); } 
+            catch(e) { return ''; }
+        };
+
+        // Core Functions
+        const updatePreview = () => {
             const code = editor.value;
-            const compressed = LZString.compressToEncodedURIComponent(code);
-            const newUrl = `${window.location.origin}${window.location.pathname}#code=${compressed}`;
+            preview.srcdoc = code;
+            charCount.textContent = code.length + ' chars';
+        };
+
+        const showToast = (msg, isError = false) => {
+            toastBody.textContent = msg;
+            toastEl.classList.remove('bg-success', 'bg-danger');
+            toastEl.classList.add(isError ? 'bg-danger' : 'bg-success');
+            bsToast.show();
+        };
+
+        const shareLink = async () => {
+            const hash = encode(editor.value);
+            // Safer way to get base URL without hash, compatible with file://
+            const baseUrl = window.location.href.split('#')[0];
+            const url = baseUrl + '#' + hash;
             
-            history.pushState(null, '', newUrl);
+            // Update URL bar
+            window.location.hash = hash;
             
             try {
-                await navigator.clipboard.writeText(newUrl);
-                const toastEl = document.getElementById('liveToast');
-                const toast = new bootstrap.Toast(toastEl);
-                toast.show();
+                // Clipboard API might fail on non-secure contexts (like file:// in some browsers)
+                await navigator.clipboard.writeText(url);
+                showToast('Link copied to clipboard!');
             } catch (err) {
-                alert('Failed to copy URL');
+                // Fallback for file protocol or when clipboard is blocked
+                prompt("Copy this link to share:", url);
             }
         };
 
-        // --- 5. AI Generation ---
-        aiForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const prompt = promptInput.value.trim();
-            const refineText = refineContext.value.trim();
-            
-            if (!prompt || isGenerating) return;
+        const downloadCode = () => {
+            const blob = new Blob([editor.value], {type: 'text/html'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'index.html';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Download started!');
+        };
 
-            const apiKey = process.env.API_KEY; 
-
-            if (!apiKey) {
-                alert('API Key is missing (process.env.API_KEY).');
-                return;
-            }
-
-            try {
-                isGenerating = true;
-                loader.classList.remove('d-none');
-                
-                const ai = new GoogleGenAI({ apiKey: apiKey });
-                
-                let systemInstruction = "You are an expert web developer specializing in single-file HTML5/CSS/JS solutions.";
-                
-                let promptText = `Task: Generate a single-file HTML5 web page based on this request: "${prompt}".`;
-                
-                if (refineText) {
-                    promptText += `\n\nAdditional Constraints/Instructions:\n${refineText}`;
-                }
-
-                promptText += `\n\nCurrent Code Context:\n${editor.value.substring(0, 1000)}...`;
-                promptText += `\n\nRequirements:
-                    1. Return ONLY valid HTML code. No markdown fences.
-                    2. Include internal CSS in <style> for modern, high-quality aesthetics.
-                    3. Use Vanilla JS for interactivity if needed.
-                    4. Ensure the layout is responsive (Bootstrap 5 via CDN is allowed if requested).`;
-
-                const response = await ai.models.generateContent({
-                    model: 'gemini-3-flash-preview',
-                    contents: promptText,
-                    config: {
-                        systemInstruction: systemInstruction,
-                        thinkingConfig: { thinkingBudget: 0 }
-                    }
-                });
-
-                let generatedText = response.text;
-                if (generatedText) {
-                    // Cleanup potential markdown
-                    generatedText = generatedText.replace(/^```html/, '').replace(/^```/, '').replace(/```$/, '').trim();
-                    editor.value = generatedText;
-                    updatePreview();
-                }
-            } catch (error) {
-                console.error("AI Error:", error);
-                alert("Generation failed: " + error.message);
-            } finally {
-                isGenerating = false;
-                loader.classList.add('d-none');
-            }
-        });
-
-        // --- 6. Editor Support ---
-        editor.addEventListener('input', () => updatePreview());
+        // Event Listeners
+        editor.addEventListener('input', updatePreview);
         
-        // Tab key support
-        editor.addEventListener('keydown', function(e) {
-            if (e.key == 'Tab') {
+        editor.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
                 e.preventDefault();
-                var start = this.selectionStart;
-                var end = this.selectionEnd;
-                this.value = this.value.substring(0, start) + "  " + this.value.substring(end);
-                this.selectionStart = this.selectionEnd = start + 2;
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                editor.value = editor.value.substring(0, start) + "  " + editor.value.substring(end);
+                editor.selectionStart = editor.selectionEnd = start + 2;
                 updatePreview();
             }
         });
 
-        init();
+        // Initialize
+        window.addEventListener('load', () => {
+            const hash = window.location.hash;
+            if (hash && hash.length > 1) {
+                const decoded = decode(hash);
+                editor.value = decoded || DEFAULT_CODE;
+            } else {
+                editor.value = DEFAULT_CODE;
+            }
+            updatePreview();
+        });
     </script>
-    
-    <!-- Bootstrap Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
