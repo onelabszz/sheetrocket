@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML Share - Single File Editor</title>
+    <title>SheetRocket - Cloud Editor</title>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -24,7 +24,7 @@
             font-family: 'Inter', sans-serif;
             height: 100vh;
             overflow: hidden;
-            display: flex;
+            display: none; /* Disembunyikan saat inisialisasi */
             flex-direction: column;
             color: #f8f9fa;
         }
@@ -40,12 +40,14 @@
         .brand-icon {
             width: 40px;
             height: 40px;
-            background: linear-gradient(135deg, #0d6efd, #0a58ca);
+            /* Gradient combining Green (Sheets) and Blue/Cyan (Sky/Rocket) */
+            background: linear-gradient(135deg, #198754, #0dcaf0); 
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
+            box-shadow: 0 0 15px rgba(13, 202, 240, 0.3);
         }
 
         /* Main Layout */
@@ -117,6 +119,25 @@
             border: none;
         }
 
+        /* Loading Overlay */
+        #loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #212529;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            color: white;
+        }
+        
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            margin-bottom: 1rem;
+        }
+
         /* Mobile Responsive */
         @media (max-width: 768px) {
             .workspace {
@@ -161,24 +182,37 @@
 </head>
 <body>
 
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="spinner-border text-info" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 id="loading-text">Launching SheetRocket...</h5>
+    </div>
+
     <!-- Header -->
     <nav class="navbar navbar-dark">
         <div class="container-fluid p-0">
             <div class="d-flex align-items-center gap-3">
                 <div class="brand-icon">
-                    <i class="bi bi-code-slash fs-5"></i>
+                    <!-- Rocket Icon for the new Brand -->
+                    <i class="bi bi-rocket-takeoff-fill fs-5"></i>
                 </div>
                 <div>
-                    <h6 class="m-0 fw-bold text-white">HTML Share</h6>
-                    <small class="text-secondary" style="font-size: 12px;">Single File Editor</small>
+                    <h6 class="m-0 fw-bold text-white text-uppercase" style="letter-spacing: 0.5px;">SheetRocket <span class="badge bg-secondary bg-opacity-50 border border-secondary border-opacity-50 ms-2" style="font-size: 0.6em; vertical-align: middle;">BETA</span></h6>
+                    <small class="text-secondary" style="font-size: 11px;" id="project-status">Powered by Google Sheets</small>
                 </div>
             </div>
             
             <div class="d-flex gap-2">
-                <button onclick="downloadCode()" class="btn btn-outline-light btn-sm d-flex align-items-center gap-2">
-                    <i class="bi bi-download"></i> <span class="d-none d-sm-inline">Download</span>
+                <button onclick="saveToCloud()" class="btn btn-success btn-sm d-flex align-items-center gap-2 shadow-sm" id="btn-save" title="Save to Google Sheets">
+                    <i class="bi bi-cloud-check-fill"></i> <span class="d-none d-sm-inline">Save</span>
                 </button>
-                <button onclick="shareLink()" class="btn btn-primary btn-sm d-flex align-items-center gap-2 shadow-sm">
+                <div class="vr bg-secondary mx-1 opacity-25"></div>
+                <button onclick="deployPage()" class="btn btn-outline-info btn-sm d-flex align-items-center gap-2 text-white" title="Open View Mode">
+                    <i class="bi bi-window-fullscreen"></i> <span class="d-none d-sm-inline">Deploy</span>
+                </button>
+                <button onclick="shareLink()" class="btn btn-primary btn-sm d-flex align-items-center gap-2 shadow-sm" title="Share URL">
                     <i class="bi bi-share-fill"></i> Share
                 </button>
             </div>
@@ -190,16 +224,19 @@
         <!-- Editor Column -->
         <div class="pane editor-pane">
             <div class="pane-header">
-                <span><i class="bi bi-filetype-html me-2"></i>index.html</span>
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-filetype-html"></i>
+                    <span>index.html</span>
+                </div>
                 <span id="char-count">0 chars</span>
             </div>
-            <textarea id="code-editor" spellcheck="false" placeholder="<!-- Start typing HTML here... -->"></textarea>
+            <textarea id="code-editor" spellcheck="false" placeholder="<!-- Start coding your masterpiece here... -->"></textarea>
         </div>
 
         <!-- Preview Column -->
         <div class="pane preview-pane">
             <div class="pane-header">
-                <span class="fw-bold"><i class="bi bi-window me-2"></i>Preview</span>
+                <span class="fw-bold"><i class="bi bi-eye-fill me-2"></i>Preview</span>
                 <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 d-flex align-items-center gap-1">
                     <i class="bi bi-circle-fill" style="font-size: 6px;"></i> Live
                 </span>
@@ -213,7 +250,7 @@
         <div id="toast-msg" class="toast align-items-center text-white bg-success border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body d-flex align-items-center gap-2" id="toast-body-text">
-                    Link copied to clipboard!
+                    Action successful!
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
@@ -225,51 +262,74 @@
 
     <!-- App Logic -->
     <script>
-        // DOM Elements
+        // --- CONFIGURATION ---
+        // Link Web App Anda (diperbarui sesuai request)
+        const APP_URL = "https://script.google.com/macros/s/AKfycbw_NrRwHRt_x8UlsQCKIddB6WXjA_kodlh77OliuuW5MeQMsdoNzUuDfVmvPx5NLlFk7g/exec";
+
+        // --- UTILITIES ---
+        const encode = (str) => {
+            try { return btoa(unescape(encodeURIComponent(str))); } catch(e) { return ''; }
+        };
+        const decode = (hash) => {
+            try { return decodeURIComponent(escape(atob(hash.replace(/^#/, '')))); } catch(e) { return ''; }
+        };
+
+        // --- DOM ELEMENTS ---
         const editor = document.getElementById('code-editor');
         const preview = document.getElementById('preview-frame');
         const charCount = document.getElementById('char-count');
         const toastEl = document.getElementById('toast-msg');
         const toastBody = document.getElementById('toast-body-text');
         const bsToast = new bootstrap.Toast(toastEl);
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const projectStatus = document.getElementById('project-status');
 
-        // Default Template
+        // --- STATE ---
+        let currentCloudId = null;
+
+        // --- DEFAULT CODE ---
         const DEFAULT_CODE = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bootstrap 5 Page</title>
+    <title>SheetRocket Page</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .card { border: none; shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        body { background: linear-gradient(135deg, #f0f2f5 0%, #e9ecef 100%); display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; }
+        .card { border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 16px; overflow: hidden; }
+        .card-header { background: white; border-bottom: 1px solid #f0f0f0; padding: 2rem; }
+        .icon-box { width: 80px; height: 80px; background: linear-gradient(135deg, #198754, #0dcaf0); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: white; font-size: 2.5rem; }
     </style>
 </head>
 <body>
-    <div class="container text-center">
-        <div class="card p-5">
-            <h1 class="display-4 text-primary fw-bold mb-3">Hello World!</h1>
-            <p class="lead text-secondary mb-4">This is a live preview of your HTML code.</p>
-            <button class="btn btn-primary btn-lg" onclick="alert('It works!')">Click Me</button>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card text-center">
+                    <div class="card-body p-5">
+                        <div class="icon-box"><i class="bi bi-rocket-takeoff"></i></div>
+                        <h2 class="fw-bold text-dark mb-3">Hello, SheetRocket!</h2>
+                        <p class="text-secondary mb-4">This page is stored in a Google Sheet and deployed instantly. Edit me to build something cool!</p>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary btn-lg rounded-pill" onclick="alert('Ready for liftoff!')">Launch Action</button>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-light p-3 text-muted small">
+                        Built with Bootstrap 5 & Apps Script
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"><\/script>
+    <!-- Bootstrap Icons via CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 </body>
 </html>`;
 
-        // Encoding Utilities
-        const encode = (str) => {
-            try { return btoa(unescape(encodeURIComponent(str))); } 
-            catch(e) { return ''; }
-        };
+        // --- CORE FUNCTIONS ---
 
-        const decode = (hash) => {
-            try { return decodeURIComponent(escape(atob(hash.replace(/^#/, '')))); } 
-            catch(e) { return ''; }
-        };
-
-        // Core Functions
         const updatePreview = () => {
             const code = editor.value;
             preview.srcdoc = code;
@@ -283,61 +343,218 @@
             bsToast.show();
         };
 
-        const shareLink = async () => {
-            const hash = encode(editor.value);
-            // Safer way to get base URL without hash, compatible with file://
-            const baseUrl = window.location.href.split('#')[0];
-            const url = baseUrl + '#' + hash;
+        const showLoading = (msg) => {
+            loadingText.textContent = msg;
+            loadingOverlay.style.display = 'flex';
+        };
+
+        const hideLoading = () => {
+            loadingOverlay.style.display = 'none';
+        };
+
+        // --- GOOGLE SHEETS INTERACTION ---
+
+        const saveToCloud = () => {
+            const code = editor.value;
+            const btn = document.getElementById('btn-save');
+            const originalBtnText = btn.innerHTML;
             
-            // Update URL bar
-            window.location.hash = hash;
-            
-            try {
-                // Clipboard API might fail on non-secure contexts (like file:// in some browsers)
-                await navigator.clipboard.writeText(url);
-                showToast('Link copied to clipboard!');
-            } catch (err) {
-                // Fallback for file protocol or when clipboard is blocked
-                prompt("Copy this link to share:", url);
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+            btn.disabled = true;
+
+            // Panggil fungsi Server-Side (Code.gs)
+            if (typeof google !== 'undefined' && google.script) {
+                google.script.run
+                    .withSuccessHandler((id) => {
+                        currentCloudId = id;
+                        
+                        // Update UI
+                        btn.innerHTML = originalBtnText;
+                        btn.disabled = false;
+                        projectStatus.textContent = "Saved to Sheet (ID: " + id + ")";
+                        projectStatus.classList.add('text-success');
+                        
+                        // Update URL (Browser History hanya untuk navigasi visual di iframe)
+                        const newUrl = updateQueryString('id', id);
+                        window.history.pushState({path: newUrl}, '', newUrl);
+                        
+                        showToast('Project saved securely to Google Sheets!');
+                    })
+                    .withFailureHandler((err) => {
+                        btn.innerHTML = originalBtnText;
+                        btn.disabled = false;
+                        console.error(err);
+                        showToast('Failed to save: ' + err.message, true);
+                    })
+                    .saveProject(code);
+            } else {
+                // Fallback untuk local dev testing
+                setTimeout(() => {
+                    btn.innerHTML = originalBtnText;
+                    btn.disabled = false;
+                    showToast('Simulation: Saved (Local Mode)', false);
+                    currentCloudId = "LOCAL_DEV";
+                    const newUrl = updateQueryString('id', 'LOCAL_DEV');
+                    window.history.pushState({path: newUrl}, '', newUrl);
+                }, 1000);
             }
         };
 
-        const downloadCode = () => {
-            const blob = new Blob([editor.value], {type: 'text/html'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'index.html';
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('Download started!');
-        };
-
-        // Event Listeners
-        editor.addEventListener('input', updatePreview);
-        
-        editor.addEventListener('keydown', (e) => {
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                const start = editor.selectionStart;
-                const end = editor.selectionEnd;
-                editor.value = editor.value.substring(0, start) + "  " + editor.value.substring(end);
-                editor.selectionStart = editor.selectionEnd = start + 2;
+        const loadFromCloud = (id, isViewMode) => {
+            showLoading("Retrieving from Google Sheets...");
+            
+            if (typeof google !== 'undefined' && google.script) {
+                google.script.run
+                    .withSuccessHandler((content) => {
+                        if (content) {
+                            if (isViewMode) {
+                                // Direct render for view mode
+                                document.open();
+                                document.write(content);
+                                document.close();
+                                hideLoading(); // Might not be seen if doc is replaced
+                            } else {
+                                // Editor mode
+                                editor.value = content;
+                                currentCloudId = id;
+                                projectStatus.textContent = "Loaded from Sheet (ID: " + id + ")";
+                                updatePreview();
+                                hideLoading();
+                                document.body.style.display = 'flex';
+                            }
+                        } else {
+                            hideLoading();
+                            alert("Project ID not found in database.");
+                            document.body.style.display = 'flex';
+                        }
+                    })
+                    .withFailureHandler((err) => {
+                        hideLoading();
+                        showToast("Error loading project: " + err.message, true);
+                        document.body.style.display = 'flex';
+                    })
+                    .loadProject(id);
+            } else {
+                hideLoading();
+                editor.value = "<!-- Local Dev Mode: Cannot load real data -->\n" + DEFAULT_CODE;
                 updatePreview();
+                document.body.style.display = 'flex';
             }
-        });
+        };
 
-        // Initialize
-        window.addEventListener('load', () => {
+        // --- URL HELPERS ---
+
+        const updateQueryString = (key, value) => {
+            const url = new URL(window.location.href);
+            url.searchParams.set(key, value);
+            // Remove hash if we are switching to Cloud ID system to avoid confusion
+            if(key === 'id') url.hash = ''; 
+            return url.toString();
+        };
+
+        const getBaseUrl = () => {
+            // Gunakan APP_URL yang di-hardcode jika ada (Best Practice untuk GAS)
+            if (APP_URL && APP_URL.startsWith('http')) {
+                return APP_URL;
+            }
+            // Fallback ke window.location (biasanya URL sandbox)
+            return window.location.href.split('?')[0].split('#')[0];
+        };
+
+        const shareLink = async () => {
+            const baseUrl = getBaseUrl();
+            let finalUrl = baseUrl;
+            
+            // Prioritize Cloud ID link if available
+            if (currentCloudId) {
+                 finalUrl = `${baseUrl}?id=${currentCloudId}`;
+            } else {
+                // Fallback to Hash encoding if not saved
+                const hash = encode(editor.value);
+                finalUrl = `${baseUrl}#${hash}`;
+                // Set hash locally for user visual feedback
+                window.location.hash = hash;
+            }
+
+            try {
+                await navigator.clipboard.writeText(finalUrl);
+                showToast('Link copied: ' + (currentCloudId ? 'SheetRocket Link' : 'Hash Link'));
+            } catch (err) {
+                prompt("Copy this link:", finalUrl);
+            }
+        };
+
+        const deployPage = () => {
+            const baseUrl = getBaseUrl();
+            let url;
+            
+            if (currentCloudId) {
+                // Deploy via ID (Clean URL)
+                url = `${baseUrl}?view=1&id=${currentCloudId}`;
+            } else {
+                // Deploy via Hash
+                const hash = encode(editor.value);
+                url = `${baseUrl}?view=1#${hash}`;
+            }
+            window.open(url, '_blank');
+        };
+
+        // --- INITIALIZATION ---
+
+        (function init() {
+            const params = new URLSearchParams(window.location.search);
+            const viewMode = params.get('view') === '1';
+            const id = params.get('id');
             const hash = window.location.hash;
+
+            // Scenario 1: Load from Cloud ID (View or Edit)
+            if (id) {
+                loadFromCloud(id, viewMode);
+                return;
+            }
+
+            // Scenario 2: Legacy View Mode (Hash)
+            if (viewMode && hash) {
+                const decoded = decode(hash);
+                if (decoded) {
+                    document.open();
+                    document.write(decoded);
+                    document.close();
+                    return;
+                }
+            }
+            
+            // Scenario 3: Legacy Edit Mode (Hash)
             if (hash && hash.length > 1) {
+                hideLoading();
                 const decoded = decode(hash);
                 editor.value = decoded || DEFAULT_CODE;
-            } else {
-                editor.value = DEFAULT_CODE;
+                updatePreview();
+                document.body.style.display = 'flex';
+                return;
             }
+
+            // Scenario 4: New Project
+            hideLoading();
+            editor.value = DEFAULT_CODE;
             updatePreview();
-        });
+            document.body.style.display = 'flex';
+        })();
+
+        // --- EVENT LISTENERS ---
+        if (editor) {
+            editor.addEventListener('input', updatePreview);
+            editor.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = editor.selectionStart;
+                    const end = editor.selectionEnd;
+                    editor.value = editor.value.substring(0, start) + "  " + editor.value.substring(end);
+                    editor.selectionStart = editor.selectionEnd = start + 2;
+                    updatePreview();
+                }
+            });
+        }
     </script>
 </body>
 </html>
